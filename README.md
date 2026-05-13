@@ -60,6 +60,34 @@ ROADMAP.md            版本路线图
 
 ## NAS 部署
 
+当前用户 NAS 上已验证可用的运行方式是 host 网络模式，容器名为 `video-review`，监听：
+
+```text
+http://192.168.5.2:8818/
+```
+
+原因：本环境中 Docker bridge 端口发布曾出现局域网访问超时；host 网络模式已验证可以从同一局域网浏览器正常访问。
+
+当前运行命令等价于：
+
+```bash
+sudo docker run -d \
+  --name video-review \
+  --restart unless-stopped \
+  --network host \
+  -e VIDEO_REVIEW_HOST=0.0.0.0 \
+  -e VIDEO_REVIEW_PORT=8818 \
+  -e VIDEO_REVIEW_DATA_DIR=/app/data \
+  -e VIDEO_REVIEW_DOWNLOAD_ROOT=/media/download \
+  -e VIDEO_REVIEW_LIBRARY_ROOT=/media/library \
+  -v /vol2/1000/Docker/video-review/data:/app/data \
+  -v /vol1/1000/Download:/media/download:ro \
+  -v /vol1/1000/Media:/media/library:rw \
+  video-review:v0.2.0
+```
+
+下面的 compose 方式是项目标准化目标，但当前 FnOS 环境下仍需要后续验证/优化。
+
 在 NAS 宿主机或有 Docker Compose 权限的环境执行：
 
 ```bash

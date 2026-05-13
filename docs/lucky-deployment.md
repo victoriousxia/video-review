@@ -37,6 +37,42 @@ v0.x 阶段推荐：
 
 ## 启动服务
 
+### 当前 NAS 已验证运行方式
+
+当前在用户的 FnOS NAS 环境中，bridge 端口发布曾出现局域网访问超时。已验证可用的运行方式是 host 网络模式：
+
+```bash
+sudo docker rm -f video-review 2>/dev/null || true
+
+sudo docker run -d \
+  --name video-review \
+  --restart unless-stopped \
+  --network host \
+  -e VIDEO_REVIEW_HOST=0.0.0.0 \
+  -e VIDEO_REVIEW_PORT=8818 \
+  -e VIDEO_REVIEW_DATA_DIR=/app/data \
+  -e VIDEO_REVIEW_DOWNLOAD_ROOT=/media/download \
+  -e VIDEO_REVIEW_LIBRARY_ROOT=/media/library \
+  -v /vol2/1000/Docker/video-review/data:/app/data \
+  -v /vol1/1000/Download:/media/download:ro \
+  -v /vol1/1000/Media:/media/library:rw \
+  video-review:v0.2.0
+```
+
+host 模式下 Docker UI 可能不会显示 `8818:8818` 端口映射，这是正常现象。应用会直接监听 NAS 宿主网络的 `0.0.0.0:8818`。
+
+当前已由用户在同一局域网验证可访问：
+
+```text
+http://192.168.5.2:8818/
+```
+
+Lucky 反代目标使用：
+
+```text
+http://192.168.5.2:8818
+```
+
 在 NAS 宿主机 SSH 中执行：
 
 ```bash
@@ -71,6 +107,8 @@ docker compose up -d --build
 ```bash
 docker-compose up -d --build
 ```
+
+注意：当前 `docker-compose.yml` 仍是 bridge + ports 模式。该模式在本 NAS 环境中可能遇到局域网访问超时。后续可把 compose 改成 `network_mode: host`，或让 Lucky 与 video-review 加入同一个 Docker network 后由 Lucky 直连 `http://video-review:8818`。
 
 ## 反代前验证
 
@@ -176,6 +214,8 @@ docker logs video-review --tail 100
 ```bash
 curl http://127.0.0.1:8818/healthz
 ```
+
+如果容器内部健康检查正常，但局域网访问 `NAS_IP:8818` 超时，优先尝试 host 网络模式运行，或检查 FnOS 防火墙 / Docker bridge 转发 / Lucky 容器网络。
 
 ### /jobs 打开但没有任务
 
