@@ -26,10 +26,27 @@
 
   <div class="card">
     <h2>配置</h2>
-    <p>下载目录：<code>{{ settings.download_root }}</code></p>
-    <p>媒体库目录：<code>{{ settings.library_root }}</code></p>
-    <p>数据目录：<code>{{ settings.data_dir }}</code></p>
-    <p>认证模式：<code>{{ settings.auth_mode }}</code></p>
+    <p>下载目录：<code>{{ app_settings.download_root }}</code></p>
+    <p>媒体库目录：<code>{{ app_settings.library_root }}</code></p>
+    <p>数据目录：<code>{{ app_settings.data_dir }}</code></p>
+    <p>认证模式：<code>{{ app_settings.auth_mode }}</code></p>
+  </div>
+
+  <div class="card">
+    <h2>当前能力</h2>
+    <p>Review 网页：<code>{{ service_info.capabilities.review_web }}</code></p>
+    <p>扫描任务：<code>{{ service_info.capabilities.scan_jobs }}</code></p>
+    <p>截图批次：<code>{{ service_info.capabilities.screenshot_batches }}</code></p>
+    <p>执行计划：<code>{{ service_info.capabilities.execution_plans }}</code></p>
+    <p>媒体文件改动：<code>{{ service_info.capabilities.media_mutation }}</code></p>
+  </div>
+
+  <div class="card">
+    <h2>安全状态</h2>
+    <p>当前版本只读 Review 骨架，不会扫描、移动或删除任何视频。</p>
+    <p>Review only：<code>{{ service_info.safety.review_only }}</code></p>
+    <p>移动文件：<code>{{ service_info.safety.moves_files }}</code></p>
+    <p>删除文件：<code>{{ service_info.safety.deletes_files }}</code></p>
   </div>
 
   <div class="card">

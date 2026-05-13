@@ -1,6 +1,6 @@
 # Progress
 
-Current version: 0.1.0-dev
+Current version: 0.1.0
 
 ## Completed
 
@@ -12,12 +12,29 @@ Current version: 0.1.0-dev
 - Defined generic Docker-service-first architecture
 - Defined optional Hermes integration boundary
 - Added project docs skeleton
-- Added FastAPI skeleton with `/healthz`, `/api/v1/info`, and index page
-- Added Dockerfile, `docker-compose.yml`, `.env.example`, and pytest skeleton
+- Added FastAPI skeleton with `/`, `/healthz`, and `/api/v1/info`
+- Added explicit API capability flags:
+  - `review_web: true`
+  - `healthcheck: true`
+  - `scan_jobs: false`
+  - `screenshot_batches: false`
+  - `execution_plans: false`
+  - `media_mutation: false`
+- Added explicit API safety flags:
+  - `review_only: true`
+  - `moves_files: false`
+  - `deletes_files: false`
+- Added app-owned data subdirectories:
+  - `/app/data/screenshots`
+  - `/app/data/jobs`
+  - `/app/data/logs`
+- Added Dockerfile and `docker-compose.yml`
+- Avoided global Docker daemon DNS changes after they disrupted Hermes/Open WebUI model connectivity
+- Promoted version from `0.1.0-dev` to `0.1.0`
 
 ## In progress
 
-- v0.1.0 verification in the NAS environment
+- Preparing v0.2.0: SQLite initialization and scan job model
 
 ## Pending
 
@@ -32,11 +49,16 @@ Current version: 0.1.0-dev
 ## Last verification
 
 - GitHub SSH deploy-key authentication succeeded for `victoriousxia/video-review`.
-- `git push -u origin main` succeeded; remote `main` points to commit `a4f73c29728bdfbc5d6d867b880e12913c476a04` before the collaboration-doc update.
-- `python3 -m pytest -q` failed because the host Python lacks pytest.
-- Creating a local virtual environment failed because the host Python lacks `ensurepip` / `python3.13-venv`.
-- `docker compose config` and `docker-compose config` are unavailable in the Hermes container.
-- `docker build -t video-review:test .` reached the Docker daemon but failed during `apt-get update` due DNS resolution failure for `deb.debian.org` inside the Docker build environment.
-- Attempting to fix Docker build by changing global Docker daemon DNS disrupted existing containers' model/network access; do not require global Docker daemon DNS changes for this project.
+- GitHub remote push previously succeeded; current v0.1.0 changes are ready to push.
+- `python -m pytest tests -q` passed inside the existing `open-webui` container Python environment: `5 passed`.
+- `docker build -t video-review:test .` succeeded on the NAS without `apt-get` and without changing Docker daemon DNS.
+- A test container started with `docker run --name video-review-test -d -p 18818:8818 ... video-review:test` and Uvicorn logged successful startup on port 8818.
+- Host-to-container published-port probing from inside the Hermes execution environment returned connection-refused despite container logs showing startup; this appears to be a host/network namespace probing limitation and needs separate investigation before relying on host-side curl from Hermes.
 
-These are environment/tooling blockers, not application-code test failures. Next implementation step is to make the Docker build avoid global daemon DNS assumptions, for example by using a base image that already contains required runtime dependencies or deferring ffmpeg checks to runtime.
+## Important environment note
+
+Do not require or recommend changing NAS global Docker daemon DNS for this project. A previous daemon-level DNS change disrupted Hermes/Open WebUI/model connectivity and was reverted from backup. The project must use low-risk build/deploy strategies that do not alter existing container networking globally.
+
+## Build note
+
+The Dockerfile currently defaults to `openwebui/open-webui:0.9.5` as a temporary NAS-local base image because it already exists locally and contains FastAPI/Uvicorn/Jinja2/Pytest dependencies. This makes v0.1.0 buildable without external package downloads. Replace with a lean purpose-built image later when package-index DNS/build reliability is solved.

@@ -26,6 +26,14 @@ class Settings(BaseSettings):
     def screenshot_dir(self) -> Path:
         return self.data_dir / "screenshots"
 
+    @property
+    def jobs_dir(self) -> Path:
+        return self.data_dir / "jobs"
+
+    @property
+    def logs_dir(self) -> Path:
+        return self.data_dir / "logs"
+
 
 def load_version() -> str:
     for candidate in (Path("/app/VERSION"), Path(__file__).resolve().parents[1] / "VERSION"):
