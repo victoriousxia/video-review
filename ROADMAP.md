@@ -1,51 +1,120 @@
-# Roadmap
+# 版本路线图
 
-## v0.1.0 Project skeleton
-- Docker service starts
-- FastAPI health check
-- SQLite path/config wiring
-- project docs and Git repository
+## v0.1.0 项目骨架
 
-## v0.2.0 Scan and metadata
-- create review jobs
-- scan video files
-- ffprobe metadata extraction
-- job list UI
+状态：已完成
 
-## v0.3.0 Screenshot batches
-- default multi-frame screenshots
-- per-video regenerate
-- uniform/random/manual timestamp strategies
-- screenshot batch history
+目标：
 
-## v0.4.0 Review decisions
-- save per-video decisions
-- filters and progress
-- batch decision updates
+- Docker 服务可以启动
+- FastAPI 健康检查可用
+- 基础配置和路径打通
+- Git 仓库和项目文档建立
 
-## v0.5.0 Organization suggestions
-- movie/series/anime/documentary heuristics
-- target path suggestions
-- sample/incomplete detection
+## v0.2.0 Docker/Lucky 流程和任务基础
 
-## v0.6.0 Dry-run execution plans
-- generate plan from reviewed decisions
-- show moves/renames/trash candidates
-- no filesystem mutation
+状态：已完成
 
-## v0.7.0 Safe executor
-- execute only after external confirmation
-- move companion subtitle/nfo/artwork files
-- trash instead of delete
-- execution log
+目标：
 
-## v0.8.0 Hermes integration
-- command-triggered scan
-- notification links
-- review-state checks
-- plan/execution orchestration
+- Docker 服务可以用于 Lucky 反代验证
+- SQLite 初始化
+- Review 任务创建 API
+- Review 任务列表 API
+- Review 任务详情 API
+- `/jobs` 页面
+- `/jobs/{job_id}` 页面
 
-## v1.0.0 Stable daily workflow
-- complete review-to-execute loop
-- Lucky deployment docs
-- tests and migration story
+说明：v0.2.0 不扫描真实视频，只跑通部署和任务链路。
+
+## v0.3.0 实际目录扫描和视频条目
+
+状态：计划中
+
+目标：
+
+- 扫描指定目录下的视频文件
+- 创建 `review_items` 条目
+- 记录文件名、路径、大小、修改时间
+- 识别常见视频扩展名
+- 跳过明显下载中或临时文件
+- 在任务详情页展示视频条目
+
+## v0.4.0 ffprobe 元数据
+
+状态：计划中
+
+目标：
+
+- 使用 ffprobe 读取视频时长、分辨率、编码、音频、字幕信息
+- 把元数据写入数据库
+- 在 Review 页面展示基础媒体信息
+- ffprobe 失败时记录错误，不中断整个任务
+
+## v0.5.0 截图批次
+
+状态：计划中
+
+目标：
+
+- 默认多帧截图
+- 每个视频支持多个截图批次
+- 支持单视频重新生成截图
+- 支持均匀、随机、手动时间点策略
+- 支持历史截图批次切换
+
+## v0.6.0 Review 决策
+
+状态：计划中
+
+目标：
+
+- 每个视频保存 Review 决策
+- 支持备注
+- 支持筛选和进度展示
+- 支持批量设置决策
+
+## v0.7.0 整理建议
+
+状态：计划中
+
+目标：
+
+- 基于路径和文件名判断电影、剧集、动漫、纪录片、未知
+- 生成建议目标路径
+- 生成建议新文件名
+- 识别 sample、下载未完成、疑似重复资源
+
+## v0.8.0 Dry-run 执行计划
+
+状态：计划中
+
+目标：
+
+- 根据 Review 结果生成执行计划
+- 展示将移动、重命名、回收、跳过的文件
+- 不实际修改文件
+
+## v0.9.0 安全执行器
+
+状态：计划中
+
+目标：
+
+- 用户外部确认后执行整理
+- 移动视频及同名字幕、nfo、图片
+- 删除改为移动到任务专属回收目录
+- 写入执行日志
+- 支持失败跳过和结果回写
+
+## v1.0.0 稳定日常流程
+
+状态：计划中
+
+目标：
+
+- 完整 Review 到执行闭环稳定
+- Lucky 部署文档完善
+- Hermes 触发和通知稳定
+- 测试和迁移机制完善
+- 可作为日常视频整理工具使用

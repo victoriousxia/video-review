@@ -1,32 +1,66 @@
-# Screenshot Generation
+# 截图生成设计
 
-video-review treats screenshots as versioned batches.
+截图是 Review 体验的核心功能。video-review 会把截图设计成“可重新生成、可切换批次”的机制，而不是一次性固定图片。
 
-Each video can have multiple screenshot batches:
+## 截图批次
+
+每个视频可以有多个截图批次。
+
+一个截图批次包含：
+
 - batch id
-- strategy
-- timestamps
-- image paths
-- created time
-- selected/current flag
+- 生成策略
+- 时间点列表
+- 图片路径列表
+- 创建时间
+- 是否为当前选中批次
+- 生成错误信息，如果有
 
-V1 strategies planned:
+用户在 Review 时如果觉得截图不好，可以重新生成一批，不覆盖历史批次。
 
-1. Uniform default
-   - 10%, 25%, 50%, 75%, 90%
+## 计划支持的策略
 
-2. Intro/outro-safe uniform
-   - avoid early intro and final credits
+### 均匀采样
 
-3. Random
-   - random N timestamps between configured percentage bounds
+默认时间点：
 
-4. Manual timestamps
-   - user provides exact timestamps such as `00:05:00,00:12:30`
+```text
+10%, 25%, 50%, 75%, 90%
+```
 
-Review UI requirements:
-- regenerate one video
-- regenerate current filter batch later
-- switch historical batches
-- mark one batch as current
-- deleting screenshot cache must never touch original videos
+### 避开片头片尾
+
+适合片头、片尾、字幕较多的视频，例如：
+
+```text
+15%, 30%, 45%, 60%, 75%, 90%
+```
+
+### 随机采样
+
+在配置范围内随机取 N 张，例如从 10% 到 90% 之间随机抽取 5 张。
+
+### 手动时间点
+
+用户输入明确时间点，例如：
+
+```text
+00:05:00, 00:12:30, 00:36:00
+```
+
+## Review UI 要求
+
+后续页面需要支持：
+
+- 单个视频重新生成截图
+- 当前筛选结果批量重新生成截图
+- 整个任务重新生成截图
+- 查看历史截图批次
+- 切换当前截图批次
+- 删除某个截图缓存批次
+
+删除截图缓存只会删除应用生成的图片，不会触碰原始视频。
+
+## v0.2.0 状态
+
+当前版本还未实现截图生成。截图系统计划从 v0.5.0 开始实现。

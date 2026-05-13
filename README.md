@@ -1,100 +1,186 @@
 # video-review
 
-NAS video organization review service.
+video-review 是一个运行在 NAS 上的视频整理 Review 服务。
 
-It scans video folders, records metadata, generates screenshot batches, lets the user review organization decisions in a web UI, and later produces safe execution plans. The first versions are review-only and do not move or delete media.
+它的目标不是直接“自动清理视频”，而是先把下载目录里的视频扫描出来，生成元数据、截图和整理建议，让用户在 Web 页面里逐项 Review。只有在用户 Review 完成，并通过消息渠道明确确认后，后续版本才会执行移动、重命名或回收站清理。
 
-## Design stance
+当前版本：0.2.0
 
-video-review is a general Docker service first, with optional Hermes integration.
+## 当前版本能做什么
 
-Core service responsibilities:
-- scan configured media roots
-- generate and regenerate screenshot batches
-- store review jobs and decisions
-- expose a mobile-friendly review web UI
-- expose HTTP/CLI APIs for automation
+v0.2.0 主要用于跑通 Docker + Lucky 反代 + 基础任务流程：
 
-Hermes responsibilities:
-- trigger scans from chat commands
-- send links/notifications through the current channel
-- read review state
-- ask for explicit confirmation before execution
-- call the service API or CLI to generate/apply plans
+- Docker 服务可以启动
+- Web 首页可以打开
+- `/healthz` 健康检查可用
+- `/api/v1/info` 服务信息接口可用
+- SQLite 数据库会在启动时初始化
+- 可以创建 Review 任务记录
+- 可以查看任务列表和任务详情页
+- 可以通过 Lucky 反代访问页面
 
-This keeps the Docker service usable without Hermes while allowing Hermes to orchestrate it.
+注意：v0.2.0 还不会真正扫描视频文件，不会生成截图，也不会移动、重命名或删除任何媒体文件。
 
-## Current version
+## 架构原则
 
-See `VERSION`, `CHANGELOG.md`, `ROADMAP.md`, and `docs/progress.md`.
+video-review 优先是一个通用 Docker 服务，Hermes 只是可选编排器。
 
-## Local Docker start
+video-review 负责：
+
+- 管理 Review 任务
+- 保存任务和条目数据
+- 提供 Web UI
+- 提供 HTTP API
+- 后续负责扫描、截图、Review 决策、执行计划
+
+Hermes 负责：
+
+- 根据聊天命令触发扫描
+- 给用户发送 Review 链接和通知
+- 读取 Review 进度
+- 在执行整理前向用户确认
+- 调用 video-review API 执行后续动作
+
+这样设计可以避免项目和 Hermes 强耦合。以后即使用 curl、cron、Mac 脚本或其他自动化服务，也可以调用 video-review。
+
+## 目录结构
+
+```text
+app/                  FastAPI 应用代码
+app/templates/        Web 页面模板
+docs/                 项目文档
+tests/                自动化测试
+Dockerfile            Docker 镜像构建文件
+docker-compose.yml    NAS 部署用 compose 文件
+.env.example          环境变量示例
+VERSION               当前版本号
+CHANGELOG.md          版本变更记录
+ROADMAP.md            版本路线图
+```
+
+## NAS 部署
+
+在 NAS 宿主机或有 Docker Compose 权限的环境执行：
 
 ```bash
+cd /vol2/1000/Docker/video-review
+git pull
 cp .env.example .env
-# Use whichever compose command is installed on the NAS host:
+```
+
+根据需要编辑 `.env`：
+
+```text
+VIDEO_REVIEW_PUBLIC_BASE_URL=https://video-review.example.com
+VIDEO_REVIEW_DOWNLOAD_ROOT=/media/download
+VIDEO_REVIEW_LIBRARY_ROOT=/media/library
+VIDEO_REVIEW_AUTH_MODE=none
+```
+
+启动：
+
+```bash
 docker compose up -d --build
-# or:
+```
+
+如果系统使用旧版 compose：
+
+```bash
 docker-compose up -d --build
 ```
 
-Open:
+默认端口：
 
 ```text
 http://NAS_IP:8818
 ```
 
-Lucky reverse proxy should point to port 8818 and provide HTTPS + authentication. See `docs/lucky-deployment.md` for the detailed flow.
+## Lucky 反代
 
-v0.2.0 smoke-test API:
+推荐 Lucky 反代目标：
 
-```bash
-curl -X POST http://NAS_IP:8818/api/v1/jobs \
-  -H 'Content-Type: application/json' \
-  -d '{"name":"Lucky smoke test","scan_path":"/media/download"}'
+```text
+http://NAS_IP:8818
 ```
 
-Then open:
+推荐外部访问地址：
+
+```text
+https://video-review.你的域名
+```
+
+Lucky 上必须开启 HTTPS 和认证。v0.x 阶段建议认证放在 Lucky 层处理，video-review 应用内部暂时保持 `VIDEO_REVIEW_AUTH_MODE=none`。
+
+详细步骤见：
+
+```text
+docs/lucky-deployment.md
+```
+
+## 联通性测试
+
+服务启动后先访问：
+
+```text
+http://NAS_IP:8818/
+http://NAS_IP:8818/healthz
+http://NAS_IP:8818/jobs
+```
+
+创建一个测试 Review 任务：
+
+```bash
+curl -X POST http://NAS_IP:8818/api/v1/jobs   -H 'Content-Type: application/json'   -d '{"name":"Lucky 联通性测试","scan_path":"/media/download","notes":"验证 Lucky 反代流程"}'
+```
+
+然后打开：
 
 ```text
 http://NAS_IP:8818/jobs
 ```
 
-## Mac development / pulling code
+如果能看到任务，说明 Docker 服务、SQLite、API、Web 页面基础链路已经跑通。
 
-Canonical remote repository:
+## Mac 协作开发
+
+GitHub 主仓库：
 
 ```text
-https://github.com/victoriousxia/video-review
+git@github.com:victoriousxia/video-review.git
 ```
 
-Clone on Mac:
+Mac 上拉取：
 
 ```bash
 git clone git@github.com:victoriousxia/video-review.git
 ```
 
-The NAS working copy lives at:
-
-```text
-/nas/docker/video-review
-```
-
-Collaboration rules:
-
-1. Pull before editing or continuing work:
+日常协作规则：
 
 ```bash
 git pull --ff-only
+# 修改代码
+git add .
+git commit -m "说明本次改动"
+git push
 ```
 
-2. Commit focused changes with clear messages.
-3. Push to GitHub after each coherent milestone.
-4. Hermes will also pull before modifying code to avoid overwriting Mac-side commits.
-5. If both Mac and Hermes change the same files, resolve through normal Git merge/rebase rather than editing the NAS copy out of band.
+Hermes 继续开发前也会先 `git pull --ff-only`，避免覆盖你在 Mac 上的提交。
 
-NAS deploy key:
+## 安全边界
 
-The NAS/Hermes environment uses a repository-scoped GitHub deploy key with write access, not a personal SSH key. This keeps access limited to `victoriousxia/video-review`.
+当前版本不会改动媒体文件。
 
-Direct NAS-path cloning is no longer the recommended workflow. Use GitHub as the shared source of truth.
+后续版本也会遵守：
+
+- Review 阶段不移动、不重命名、不删除视频
+- 删除默认先进入任务专属回收目录
+- 执行动作前必须生成 dry-run 计划
+- 整理/清理必须由用户在消息渠道明确确认
+- 下载中、最近修改、疑似占用的文件默认跳过
+
+## 重要环境约束
+
+不要为了这个项目修改 NAS 的全局 Docker daemon DNS。
+
+之前全局 DNS 修改曾导致 Hermes/Open WebUI/模型连接异常。项目必须使用低风险构建和部署策略，不依赖修改现有 Docker 全局网络。

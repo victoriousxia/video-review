@@ -1,52 +1,74 @@
-# Changelog
+# 版本变更记录
 
 ## 0.2.0 - 2026-05-13
 
-Docker/Lucky deployment flow and review-job foundation:
-- Added SQLite initialization at service startup.
-- Added `review_jobs`, `review_items`, and `schema_meta` tables.
-- Added review job API endpoints:
+Docker/Lucky 部署流程和 Review 任务基础版本。
+
+新增：
+
+- 服务启动时初始化 SQLite 数据库。
+- 新增数据表：
+  - `schema_meta`
+  - `review_jobs`
+  - `review_items`
+- 新增 Review 任务 API：
   - `GET /api/v1/jobs`
   - `POST /api/v1/jobs`
   - `GET /api/v1/jobs/{job_id}`
-- Added scan-path validation so jobs must stay under configured media roots.
-- Added HTML pages for `/jobs` and `/jobs/{job_id}`.
-- Updated the home page to show recent jobs, database path, public URL, and v0.2.0 safety state.
-- Marked `scan_jobs: true` while keeping `media_mutation: false`.
-- Verified Docker image build on NAS without changing global Docker daemon DNS.
-- Verified a container can start, initialize SQLite, and create/read a smoke-test job from inside the container.
-- Documented Lucky reverse proxy deployment flow.
+- 新增扫描路径校验，只允许在配置的下载目录和媒体库目录下创建任务。
+- 新增 Web 页面：
+  - `/jobs`
+  - `/jobs/{job_id}`
+- 首页展示版本、路径、数据库、公开地址、最近任务和安全状态。
+- 能力标识中开启 `scan_jobs: true`，但仍保持 `media_mutation: false`。
+- 在 NAS 上验证 Docker 镜像可以构建，不需要修改全局 Docker daemon DNS。
+- 验证容器可以启动、初始化 SQLite、创建和读取 smoke-test 任务。
+- 新增 Lucky 反代部署文档。
 
-Notes:
-- v0.2.0 creates task records only; it does not scan real video files yet.
-- v0.2.0 does not generate screenshots yet.
-- v0.2.0 does not move, rename, or delete any media files.
-- Host-to-container curl from the Hermes execution namespace still reports connection refused even when Docker publishes the port and the service works inside the container. Validate Lucky from NAS UI/host-side access, not only from this Hermes namespace.
+限制：
+
+- v0.2.0 只创建 Review 任务记录，还不会扫描真实视频。
+- v0.2.0 还不会生成截图。
+- v0.2.0 不会移动、重命名或删除任何媒体文件。
+- Hermes 执行环境里访问宿主映射端口可能不稳定；Lucky 访问请从 NAS UI、Mac 浏览器或宿主网络路径验证。
 
 ## 0.1.0 - 2026-05-13
 
-Runnable Docker/service foundation:
-- Kept the project as a generic Docker service with optional Hermes orchestration.
-- Added FastAPI app shell with `/`, `/healthz`, and `/api/v1/info`.
-- Added explicit capability flags so clients can see which features are enabled.
-- Added explicit safety flags showing this version is review-only and will not move or delete media.
-- Added writable app data subdirectories for screenshots, jobs, and logs.
-- Switched startup from deprecated FastAPI `on_event` to lifespan startup.
-- Adjusted Dockerfile to avoid `apt-get` and global Docker daemon DNS changes.
-- Verified Docker image build on the NAS using the locally available Open WebUI base image.
-- Verified API/unit tests inside the existing Open WebUI Python environment.
+可运行的 Docker/FastAPI 服务基础版本。
 
-Notes:
-- v0.1.0 does not scan videos yet.
-- v0.1.0 does not generate screenshots yet.
-- v0.1.0 does not move, rename, or delete any media files.
-- The Dockerfile currently defaults to `openwebui/open-webui:0.9.5` as a pragmatic NAS-local base image because the NAS Docker build environment cannot resolve external package indexes reliably. This is temporary and should be replaced by a purpose-built runtime image when network/build constraints are solved.
+新增：
+
+- 项目定位为通用 Docker 服务，Hermes 作为可选编排器。
+- FastAPI 应用骨架。
+- `/` 首页。
+- `/healthz` 健康检查接口。
+- `/api/v1/info` 服务信息接口。
+- 显式能力标识，方便自动化客户端判断当前支持哪些功能。
+- 显式安全标识，说明当前版本不会移动或删除媒体。
+- 应用数据目录：
+  - `/app/data/screenshots`
+  - `/app/data/jobs`
+  - `/app/data/logs`
+- FastAPI 启动逻辑使用 lifespan，避免 deprecated `on_event`。
+- Dockerfile 避免 `apt-get`，不要求改 Docker daemon DNS。
+- 在 NAS 上完成 Docker 镜像构建验证。
+- 在现有 Open WebUI Python 环境里完成基础测试验证。
+
+限制：
+
+- v0.1.0 不扫描视频。
+- v0.1.0 不生成截图。
+- v0.1.0 不移动、重命名或删除任何媒体文件。
+- Dockerfile 暂时默认使用本地已有的 `openwebui/open-webui:0.9.5` 作为基础镜像，以绕开 NAS Docker build 阶段外网 DNS 问题。后续应替换为更轻量的专用运行时镜像。
 
 ## 0.1.0-dev
 
-Initial Docker project skeleton:
-- FastAPI app shell
-- health check
-- configuration model
-- project documentation
-- Dockerfile and docker-compose
+初始项目骨架：
+
+- Git 仓库初始化
+- FastAPI 应用骨架
+- 健康检查
+- 配置模型
+- 项目文档
+- Dockerfile
+- docker-compose.yml

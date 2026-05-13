@@ -1,9 +1,45 @@
-# Safety Rules
+# 安全规则
 
-1. Review generation must not move, rename, or delete media files.
-2. The web UI may save review decisions but must not directly perform destructive operations in early versions.
-3. Delete means move to a task-specific trash folder first, never direct removal by default.
-4. Execution requires an explicit external confirmation message from the user.
-5. Recently modified, incomplete, or locked files are skipped by default.
-6. Every execution plan must be reviewable before it mutates files.
-7. Every mutation must write before/after paths to an execution log.
+video-review 的核心安全原则是：先 Review，后确认，再执行。
+
+## 当前版本安全状态
+
+v0.2.0 不会修改任何媒体文件。
+
+它只会：
+
+- 创建 Review 任务记录
+- 初始化 SQLite 数据库
+- 展示 Web 页面
+- 返回 API 数据
+
+它不会：
+
+- 扫描真实视频内容
+- 生成截图
+- 移动文件
+- 重命名文件
+- 删除文件
+
+## 长期安全规则
+
+1. Review 阶段不得移动、重命名或删除媒体文件。
+2. Web UI 可以保存 Review 决策，但早期版本不直接执行破坏性操作。
+3. 删除默认表示“移动到任务专属回收目录”，不是直接 `rm`。
+4. 执行整理必须先生成 dry-run 计划。
+5. 执行前必须通过消息渠道获得用户明确确认。
+6. 最近修改、下载未完成、疑似被占用或临时文件默认跳过。
+7. 每次执行都必须记录 before/after 路径。
+8. 单个文件执行失败时记录错误并跳过，不应导致整个任务失控。
+9. 不应要求用户修改 NAS 全局 Docker 网络、DNS 等高风险配置作为项目运行前提。
+10. Lucky 反代必须开启 HTTPS 和认证，不应裸露到公网。
+
+## 删除策略
+
+后续版本即使用户标记“可删除”，系统也只会先移动到类似路径：
+
+```text
+/media/download/.video-review-trash/<job_id>/
+```
+
+彻底删除应作为更高风险的单独动作处理。
