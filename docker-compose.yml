@@ -1,0 +1,20 @@
+services:
+  video-review:
+    build: .
+    image: video-review:local
+    container_name: video-review
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "8818:8818"
+    volumes:
+      - ./data:/app/data
+      - /nas/download:/media/download:ro
+      - /nas/media:/media/library:rw
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8818/healthz', timeout=3).read()"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s

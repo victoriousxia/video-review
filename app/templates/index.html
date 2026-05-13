@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>video-review</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 0; background: #0f172a; color: #e5e7eb; }
+    main { max-width: 960px; margin: 0 auto; padding: 32px 18px; }
+    .card { background: #111827; border: 1px solid #374151; border-radius: 16px; padding: 20px; margin: 16px 0; }
+    code { background: #020617; padding: 2px 6px; border-radius: 6px; }
+    .muted { color: #9ca3af; }
+    .badge { display: inline-block; background: #1d4ed8; color: white; border-radius: 999px; padding: 4px 10px; font-size: 13px; }
+  </style>
+</head>
+<body>
+<main>
+  <div class="badge">{{ version }}</div>
+  <h1>video-review</h1>
+  <p class="muted">NAS 视频整理 Review 服务。当前是项目骨架版本，还不会扫描、移动或删除任何视频。</p>
+
+  <div class="card">
+    <h2>架构原则</h2>
+    <p>这是一个通用 Docker 服务，Hermes 只作为可选编排器负责触发扫描、发送通知、确认执行。</p>
+  </div>
+
+  <div class="card">
+    <h2>配置</h2>
+    <p>下载目录：<code>{{ settings.download_root }}</code></p>
+    <p>媒体库目录：<code>{{ settings.library_root }}</code></p>
+    <p>数据目录：<code>{{ settings.data_dir }}</code></p>
+    <p>认证模式：<code>{{ settings.auth_mode }}</code></p>
+  </div>
+
+  <div class="card">
+    <h2>接口</h2>
+    <p><a href="/healthz">/healthz</a></p>
+    <p><a href="/api/v1/info">/api/v1/info</a></p>
+  </div>
+</main>
+</body>
+</html>
