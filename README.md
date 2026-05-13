@@ -48,27 +48,39 @@ Lucky reverse proxy should point to port 8818 and provide HTTPS + authentication
 
 ## Mac development / pulling code
 
-This repository lives on the NAS at:
+Canonical remote repository:
+
+```text
+https://github.com/victoriousxia/video-review
+```
+
+Clone on Mac:
+
+```bash
+git clone git@github.com:victoriousxia/video-review.git
+```
+
+The NAS working copy lives at:
 
 ```text
 /nas/docker/video-review
 ```
 
-Recommended options from Mac:
+Collaboration rules:
 
-1. Use your NAS file sharing / SMB path and clone/copy from the shared Docker directory.
-2. If SSH is enabled on the NAS, clone directly from the repository path:
-
-```bash
-git clone ssh://USER@NAS_IP/nas/docker/video-review
-```
-
-Depending on the NAS SSH server, the absolute path may need this form:
+1. Pull before editing or continuing work:
 
 ```bash
-git clone USER@NAS_IP:/vol2/1000/Docker/video-review
+git pull --ff-only
 ```
 
-3. Later, add a private Git remote such as Gitea/GitHub and push/pull normally.
+2. Commit focused changes with clear messages.
+3. Push to GitHub after each coherent milestone.
+4. Hermes will also pull before modifying code to avoid overwriting Mac-side commits.
+5. If both Mac and Hermes change the same files, resolve through normal Git merge/rebase rather than editing the NAS copy out of band.
 
-Hermes will maintain Git commits locally in this repository so your changes can be merged/reviewed.
+NAS deploy key:
+
+The NAS/Hermes environment uses a repository-scoped GitHub deploy key with write access, not a personal SSH key. This keeps access limited to `victoriousxia/video-review`.
+
+Direct NAS-path cloning is no longer the recommended workflow. Use GitHub as the shared source of truth.
