@@ -1,11 +1,11 @@
 # Feature List
 
-## Supported in 0.1.0
+## Supported in 0.2.0
 
 - Standard Git-managed Docker project structure
 - GitHub collaboration workflow through `victoriousxia/video-review`
 - FastAPI app shell
-- Mobile-friendly placeholder index page
+- Mobile-friendly home page
 - `/healthz` health endpoint
 - `/api/v1/info` service info endpoint
 - Explicit capability flags for automation clients
@@ -15,12 +15,20 @@
 - Documented optional Hermes integration boundary
 - Documented safety rules
 - Docker image builds on the current NAS without changing global Docker daemon DNS
+- SQLite initialization on startup
+- `review_jobs`, `review_items`, and `schema_meta` tables
+- Review job creation API
+- Review job list API
+- Review job detail API
+- Scan-path validation under configured media roots
+- `/jobs` web page
+- `/jobs/{job_id}` web page
+- Lucky reverse proxy deployment flow documentation
 
 ## Not supported yet
 
-- Creating review jobs
-- SQLite database initialization
-- Video scanning
+- Actual recursive video scanning
+- Populating `review_items` from real files
 - ffprobe metadata extraction
 - Screenshot generation
 - Dynamic screenshot regeneration

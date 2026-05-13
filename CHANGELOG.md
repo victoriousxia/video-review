@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.2.0 - 2026-05-13
+
+Docker/Lucky deployment flow and review-job foundation:
+- Added SQLite initialization at service startup.
+- Added `review_jobs`, `review_items`, and `schema_meta` tables.
+- Added review job API endpoints:
+  - `GET /api/v1/jobs`
+  - `POST /api/v1/jobs`
+  - `GET /api/v1/jobs/{job_id}`
+- Added scan-path validation so jobs must stay under configured media roots.
+- Added HTML pages for `/jobs` and `/jobs/{job_id}`.
+- Updated the home page to show recent jobs, database path, public URL, and v0.2.0 safety state.
+- Marked `scan_jobs: true` while keeping `media_mutation: false`.
+- Verified Docker image build on NAS without changing global Docker daemon DNS.
+- Verified a container can start, initialize SQLite, and create/read a smoke-test job from inside the container.
+- Documented Lucky reverse proxy deployment flow.
+
+Notes:
+- v0.2.0 creates task records only; it does not scan real video files yet.
+- v0.2.0 does not generate screenshots yet.
+- v0.2.0 does not move, rename, or delete any media files.
+- Host-to-container curl from the Hermes execution namespace still reports connection refused even when Docker publishes the port and the service works inside the container. Validate Lucky from NAS UI/host-side access, not only from this Hermes namespace.
+
 ## 0.1.0 - 2026-05-13
 
 Runnable Docker/service foundation:

@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ job.name }} - video-review</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 0; background: #0f172a; color: #e5e7eb; }
+    main { max-width: 1040px; margin: 0 auto; padding: 32px 18px; }
+    a { color: #93c5fd; }
+    .card { background: #111827; border: 1px solid #374151; border-radius: 16px; padding: 20px; margin: 16px 0; }
+    code { background: #020617; padding: 2px 6px; border-radius: 6px; }
+    .muted { color: #9ca3af; }
+  </style>
+</head>
+<body>
+<main>
+  <p><a href="/jobs">← Review 任务</a></p>
+  <h1>{{ job.name }}</h1>
+  <div class="card">
+    <p>任务 ID：<code>{{ job.job_id }}</code></p>
+    <p>扫描路径：<code>{{ job.scan_path }}</code></p>
+    <p>状态：<code>{{ job.status }}</code></p>
+    <p>进度：<code>{{ job.reviewed_items }} / {{ job.total_items }}</code></p>
+    <p>备注：{{ job.notes or '无' }}</p>
+    <p>创建时间：{{ job.created_at }}</p>
+    <p>更新时间：{{ job.updated_at }}</p>
+  </div>
+
+  <div class="card">
+    <h2>视频条目</h2>
+    {% if items %}
+      {% for item in items %}
+        <p>{{ item.file_name }} · <code>{{ item.review_status }}</code></p>
+      {% endfor %}
+    {% else %}
+      <p class="muted">当前版本还不会扫描真实视频，所以这个任务没有视频条目。v0.3.0 会加入实际目录扫描和基础条目生成。</p>
+    {% endif %}
+  </div>
+</main>
+</body>
+</html>

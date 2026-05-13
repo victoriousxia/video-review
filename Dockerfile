@@ -7,6 +7,11 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
+# The temporary open-webui base image carries its own HEALTHCHECK. Disable it
+# here so video-review health is controlled by docker-compose.yml and points to
+# the video-review port instead of Open WebUI's default port.
+HEALTHCHECK NONE
+
 COPY pyproject.toml /app/pyproject.toml
 COPY app /app/app
 COPY VERSION /app/VERSION

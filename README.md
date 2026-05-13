@@ -44,7 +44,21 @@ Open:
 http://NAS_IP:8818
 ```
 
-Lucky reverse proxy should point to port 8818 and provide HTTPS + authentication.
+Lucky reverse proxy should point to port 8818 and provide HTTPS + authentication. See `docs/lucky-deployment.md` for the detailed flow.
+
+v0.2.0 smoke-test API:
+
+```bash
+curl -X POST http://NAS_IP:8818/api/v1/jobs \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"Lucky smoke test","scan_path":"/media/download"}'
+```
+
+Then open:
+
+```text
+http://NAS_IP:8818/jobs
+```
 
 ## Mac development / pulling code
 

@@ -1,6 +1,6 @@
 # Progress
 
-Current version: 0.1.0
+Current version: 0.2.0
 
 ## Completed
 
@@ -13,47 +13,52 @@ Current version: 0.1.0
 - Defined optional Hermes integration boundary
 - Added project docs skeleton
 - Added FastAPI skeleton with `/`, `/healthz`, and `/api/v1/info`
-- Added explicit API capability flags:
-  - `review_web: true`
-  - `healthcheck: true`
-  - `scan_jobs: false`
-  - `screenshot_batches: false`
-  - `execution_plans: false`
-  - `media_mutation: false`
-- Added explicit API safety flags:
-  - `review_only: true`
-  - `moves_files: false`
-  - `deletes_files: false`
 - Added app-owned data subdirectories:
   - `/app/data/screenshots`
   - `/app/data/jobs`
   - `/app/data/logs`
 - Added Dockerfile and `docker-compose.yml`
 - Avoided global Docker daemon DNS changes after they disrupted Hermes/Open WebUI model connectivity
-- Promoted version from `0.1.0-dev` to `0.1.0`
+- Released v0.1.0 runnable service foundation
+- Released v0.2.0 Docker/Lucky flow and review-job foundation
+- Added SQLite startup initialization
+- Added SQLite tables:
+  - `schema_meta`
+  - `review_jobs`
+  - `review_items`
+- Added API endpoints:
+  - `GET /api/v1/jobs`
+  - `POST /api/v1/jobs`
+  - `GET /api/v1/jobs/{job_id}`
+- Added scan-path validation limited to configured download/library roots
+- Added web pages:
+  - `/jobs`
+  - `/jobs/{job_id}`
+- Updated `/` to show recent jobs and deployment configuration
+- Added Lucky deployment documentation
 
 ## In progress
 
-- Preparing v0.2.0: SQLite initialization and scan job model
+- User-side Lucky reverse proxy validation for the running Docker service
 
 ## Pending
 
-- SQLite initialization
-- scan job model
-- video scanning
-- ffprobe metadata
+- Actual video file scanning
+- Basic video item creation under a review job
+- ffprobe metadata extraction
 - screenshot batch generation and regeneration
-- Review UI
-- Lucky reverse proxy documentation
+- Review decisions
+- execution dry-run plans
+- Hermes-triggered notifications
 
 ## Last verification
 
-- GitHub SSH deploy-key authentication succeeded for `victoriousxia/video-review`.
-- GitHub remote push previously succeeded; current v0.1.0 changes are ready to push.
-- `python -m pytest tests -q` passed inside the existing `open-webui` container Python environment: `5 passed`.
-- `docker build -t video-review:test .` succeeded on the NAS without `apt-get` and without changing Docker daemon DNS.
-- A test container started with `docker run --name video-review-test -d -p 18818:8818 ... video-review:test` and Uvicorn logged successful startup on port 8818.
-- Host-to-container published-port probing from inside the Hermes execution environment returned connection-refused despite container logs showing startup; this appears to be a host/network namespace probing limitation and needs separate investigation before relying on host-side curl from Hermes.
+- GitHub SSH deploy-key authentication previously succeeded for `victoriousxia/video-review`.
+- `docker build -t video-review:v0.2.0 .` succeeded on the NAS without `apt-get` and without changing Docker daemon DNS.
+- `docker run --name video-review-v020-test -p 18818:8818 ... video-review:v0.2.0` started successfully; logs showed Uvicorn running on `0.0.0.0:8818`.
+- Inside the running container, `GET /healthz` returned OK and `GET /api/v1/jobs` returned an empty job list.
+- Inside the running container, `POST /api/v1/jobs` created a smoke-test job and `GET /api/v1/jobs/{job_id}` read it back successfully.
+- Unit tests passed inside the project image with the real host path mount: `8 passed`.
 
 ## Important environment note
 
@@ -61,4 +66,8 @@ Do not require or recommend changing NAS global Docker daemon DNS for this proje
 
 ## Build note
 
-The Dockerfile currently defaults to `openwebui/open-webui:0.9.5` as a temporary NAS-local base image because it already exists locally and contains FastAPI/Uvicorn/Jinja2/Pytest dependencies. This makes v0.1.0 buildable without external package downloads. Replace with a lean purpose-built image later when package-index DNS/build reliability is solved.
+The Dockerfile currently defaults to `openwebui/open-webui:0.9.5` as a temporary NAS-local base image because it already exists locally and contains FastAPI/Uvicorn/Jinja2/Pytest dependencies. This makes the current versions buildable without external package downloads. Replace with a lean purpose-built image later when package-index DNS/build reliability is solved.
+
+## Network note
+
+Host-to-container published-port probing from the Hermes execution namespace returned connection refused even when Docker showed `0.0.0.0:18818->8818/tcp` and the service worked inside the container. Treat Hermes-side curl against host-published ports as unreliable in this environment. Validate Lucky access from NAS UI, browser, or host-side network path.

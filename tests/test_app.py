@@ -28,7 +28,8 @@ def test_info_exposes_integration_mode_and_paths():
     assert body["jobs_dir"]
     assert body["logs_dir"]
     assert body["capabilities"]["review_web"] is True
-    assert body["capabilities"]["scan_jobs"] is False
+    assert body["capabilities"]["scan_jobs"] is True
+    assert body["capabilities"]["screenshot_batches"] is False
     assert body["safety"]["review_only"] is True
     assert body["safety"]["moves_files"] is False
     assert body["safety"]["deletes_files"] is False
@@ -41,4 +42,77 @@ def test_index_page_renders_current_safety_state():
 
     assert response.status_code == 200
     assert "video-review" in response.text
-    assert "不会扫描、移动或删除任何视频" in response.text
+    assert "当前版本支持创建 Review 任务" in response.text
+    assert "不会移动或删除任何视频" in response.text
+
+
+def test_jobs_page_renders_empty_state():
+    client = TestClient(app)
+
+    response = client.get("/jobs")
+
+    assert response.status_code == 200
+    assert "Review 任务" in response.text
+    assert "还没有 Review 任务" in response.text
+
+
+def test_can_create_and_read_review_job_via_api(tmp_path, monkeypatch):
+    monkeypatch.setenv("VIDEO_REVIEW_DATA_DIR", str(tmp_path))
+    from app.config import get_settings
+    from app.database import get_database
+
+    get_settings.cache_clear()
+    get_database.cache_clear()
+
+    try:
+        client = TestClient(app)
+
+        create_response = client.post(
+            "/api/v1/jobs",
+            json={"name": "Mantou review", "scan_path": "/media/download/Mantou", "notes": "manual trigger"},
+        )
+
+        assert create_response.status_code == 201
+        created = create_response.json()
+        assert created["name"] == "Mantou review"
+        assert created["scan_path"] == "/media/download/Mantou"
+        assert created["status"] == "ready"
+        assert created["total_items"] == 0
+
+        list_response = client.get("/api/v1/jobs")
+        assert list_response.status_code == 200
+        jobs = list_response.json()["jobs"]
+        assert len(jobs) == 1
+        assert jobs[0]["job_id"] == created["job_id"]
+
+        detail_response = client.get(f"/api/v1/jobs/{created['job_id']}")
+        assert detail_response.status_code == 200
+        detail = detail_response.json()
+        assert detail["job"]["job_id"] == created["job_id"]
+        assert detail["items"] == []
+    finally:
+        get_database.cache_clear()
+        get_settings.cache_clear()
+
+
+def test_create_job_rejects_paths_outside_allowed_roots(tmp_path, monkeypatch):
+    monkeypatch.setenv("VIDEO_REVIEW_DATA_DIR", str(tmp_path))
+    from app.config import get_settings
+    from app.database import get_database
+
+    get_settings.cache_clear()
+    get_database.cache_clear()
+
+    try:
+        client = TestClient(app)
+
+        response = client.post(
+            "/api/v1/jobs",
+            json={"name": "bad", "scan_path": "/etc"},
+        )
+
+        assert response.status_code == 400
+        assert "allowed media roots" in response.json()["detail"]
+    finally:
+        get_database.cache_clear()
+        get_settings.cache_clear()
