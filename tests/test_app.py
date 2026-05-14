@@ -76,7 +76,7 @@ def test_can_create_and_read_review_job_via_api(tmp_path, monkeypatch):
         created = create_response.json()
         assert created["name"] == "Mantou review"
         assert created["scan_path"] == "/media/download/Mantou"
-        assert created["status"] == "ready"
+        assert created["status"] == "pending"
         assert created["total_items"] == 0
 
         list_response = client.get("/api/v1/jobs")

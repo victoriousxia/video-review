@@ -11,6 +11,9 @@
     .card { background: #111827; border: 1px solid #374151; border-radius: 16px; padding: 20px; margin: 16px 0; }
     code { background: #020617; padding: 2px 6px; border-radius: 6px; }
     .muted { color: #9ca3af; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { text-align: left; padding: 10px; border-bottom: 1px solid #374151; vertical-align: top; }
+    pre { overflow-x: auto; }
   </style>
 </head>
 <body>
@@ -28,13 +31,39 @@
   </div>
 
   <div class="card">
-    <h2>视频条目</h2>
+    <h2>视频条目（{{ items | length }}）</h2>
     {% if items %}
-      {% for item in items %}
-        <p>{{ item.file_name }} · <code>{{ item.review_status }}</code></p>
-      {% endfor %}
+      <table>
+        <thead>
+        <tr>
+          <th>文件名</th>
+          <th>大小</th>
+          <th>扩展名</th>
+          <th>修改时间</th>
+          <th>状态</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for item in items %}
+          <tr>
+            <td>{{ item.file_name }}<br><span class="muted" style="font-size:0.85em">{{ item.folder_path }}</span></td>
+            <td>{{ "%.1f"|format(item.file_size / 1048576) }} MB</td>
+            <td><code>{{ item.extension }}</code></td>
+            <td>{{ item.file_mtime[:10] if item.file_mtime else '-' }}</td>
+            <td><code>{{ item.review_status }}</code></td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    {% elif job.status == 'pending' %}
+      <p class="muted">任务尚未扫描。通过 API 触发扫描：</p>
+      <pre><code>curl -X POST http://127.0.0.1:8818/api/v1/jobs/{{ job.job_id }}/scan</code></pre>
+    {% elif job.status == 'running' %}
+      <p class="muted">正在扫描中…</p>
+    {% elif job.status == 'failed' %}
+      <p class="muted">扫描失败，请检查日志后重试。</p>
     {% else %}
-      <p class="muted">当前版本还不会扫描真实视频，所以这个任务没有视频条目。v0.3.0 会加入实际目录扫描和基础条目生成。</p>
+      <p class="muted">扫描完成，未发现视频文件。</p>
     {% endif %}
   </div>
 </main>

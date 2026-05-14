@@ -1,6 +1,6 @@
 # 项目进度
 
-当前版本：0.2.0
+当前版本：0.3.0
 
 远端仓库：`git@github.com:victoriousxia/video-review.git`
 
@@ -37,6 +37,7 @@ NAS 工作目录：`/nas/docker/video-review`
   - `GET /api/v1/jobs`
   - `POST /api/v1/jobs`
   - `GET /api/v1/jobs/{job_id}`
+  - `POST /api/v1/jobs/{job_id}/scan`（v0.3.0 新增）
 - 扫描路径校验：仅允许配置的下载目录和媒体库目录
 - Web 页面：
   - `/jobs`
@@ -44,16 +45,20 @@ NAS 工作目录：`/nas/docker/video-review`
 - 首页展示最近任务和部署配置
 - Lucky 部署文档
 - 主要项目文档已改为中文
+- 发布 v0.3.0 真实目录扫描和视频条目生成
+- 扫描器模块：递归扫描、视频扩展名识别、临时文件跳过
+- review_items 写入：路径、文件名、目录、大小、扩展名、mtime、初始状态
+- Job 状态流转：pending → running → ready/failed
+- 数据库 schema v2：新增 extension、file_mtime 字段
+- 任务详情页展示视频条目表格
+- 测试 conftest 支持 Mac 本地运行（21 个测试全部通过）
 
 ## 进行中
 
-- Lucky 反代配置与外部域名访问验证。
-- 反代后的 smoke-test 流程验证：通过 Lucky 域名创建任务、查看 `/jobs`、查看任务详情。
+- NAS 上构建 v0.3.0 镜像并验证扫描功能。
 
 ## 待实现
 
-- 真实视频文件扫描
-- Review 任务下的视频条目创建
 - ffprobe 元数据提取
 - 截图批次生成和重新生成
 - Review 决策保存

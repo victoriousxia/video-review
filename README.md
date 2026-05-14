@@ -4,11 +4,11 @@ video-review 是一个运行在 NAS 上的视频整理 Review 服务。
 
 它的目标不是直接“自动清理视频”，而是先把下载目录里的视频扫描出来，生成元数据、截图和整理建议，让用户在 Web 页面里逐项 Review。只有在用户 Review 完成，并通过消息渠道明确确认后，后续版本才会执行移动、重命名或回收站清理。
 
-当前版本：0.2.0
+当前版本：0.3.0
 
 ## 当前版本能做什么
 
-v0.2.0 主要用于跑通 Docker + Lucky 反代 + 基础任务流程：
+v0.3.0 在 v0.2.0 基础上实现了真实目录扫描和视频条目生成：
 
 - Docker 服务可以启动
 - Web 首页可以打开
@@ -18,8 +18,12 @@ v0.2.0 主要用于跑通 Docker + Lucky 反代 + 基础任务流程：
 - 可以创建 Review 任务记录
 - 可以查看任务列表和任务详情页
 - 可以通过 Lucky 反代访问页面
+- 可以触发目录扫描，递归发现视频文件
+- 扫描结果写入 review_items，记录路径、文件名、大小、扩展名、修改时间
+- 任务详情页展示扫描到的视频条目表格
+- Job 状态正确流转：pending → running → ready/failed
 
-注意：v0.2.0 还不会真正扫描视频文件，不会生成截图，也不会移动、重命名或删除任何媒体文件。
+注意：v0.3.0 不会调用 ffprobe 提取元数据，不会生成截图，也不会移动、重命名或删除任何媒体文件。
 
 ## 架构原则
 
@@ -83,7 +87,7 @@ sudo docker run -d \
   -v /vol2/1000/Docker/video-review/data:/app/data \
   -v /vol1/1000/Download:/media/download:ro \
   -v /vol1/1000/Media:/media/library:rw \
-  video-review:v0.2.0
+  video-review:v0.3.0
 ```
 
 下面的 compose 方式是项目标准化目标，但当前 FnOS 环境下仍需要后续验证/优化。

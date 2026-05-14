@@ -28,6 +28,8 @@ class ReviewItem(BaseModel):
     folder_path: str
     file_name: str
     file_size: int
+    extension: str
+    file_mtime: str
     duration_seconds: float | None
     resolution: str
     codec: str

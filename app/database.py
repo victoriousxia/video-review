@@ -9,7 +9,7 @@ from uuid import uuid4
 
 from .config import Settings, get_settings
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 
 def utc_now_iso() -> str:
@@ -55,6 +55,8 @@ class Database:
                     folder_path TEXT NOT NULL,
                     file_name TEXT NOT NULL,
                     file_size INTEGER NOT NULL DEFAULT 0,
+                    extension TEXT NOT NULL DEFAULT '',
+                    file_mtime TEXT NOT NULL DEFAULT '',
                     duration_seconds REAL,
                     resolution TEXT NOT NULL DEFAULT '',
                     codec TEXT NOT NULL DEFAULT '',
@@ -79,7 +81,7 @@ class Database:
             "job_id": uuid4().hex,
             "name": name,
             "scan_path": scan_path,
-            "status": "ready",
+            "status": "pending",
             "total_items": 0,
             "reviewed_items": 0,
             "notes": notes or "",
@@ -98,6 +100,49 @@ class Database:
                 job,
             )
         return job
+
+    def update_job_status(self, job_id: str, status: str, total_items: int | None = None) -> None:
+        now = utc_now_iso()
+        with self.connect() as conn:
+            if total_items is not None:
+                conn.execute(
+                    "UPDATE review_jobs SET status = ?, total_items = ?, updated_at = ? WHERE job_id = ?",
+                    (status, total_items, now, job_id),
+                )
+            else:
+                conn.execute(
+                    "UPDATE review_jobs SET status = ?, updated_at = ? WHERE job_id = ?",
+                    (status, now, job_id),
+                )
+
+    def insert_items(self, job_id: str, items: list[dict[str, Any]]) -> None:
+        if not items:
+            return
+        now = utc_now_iso()
+        with self.connect() as conn:
+            conn.executemany(
+                """
+                INSERT INTO review_items(
+                    item_id, job_id, original_path, folder_path, file_name,
+                    file_size, extension, file_mtime, review_status, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)
+                """,
+                [
+                    (
+                        uuid4().hex,
+                        job_id,
+                        item["original_path"],
+                        item["folder_path"],
+                        item["file_name"],
+                        item["file_size"],
+                        item["extension"],
+                        item["file_mtime"],
+                        now,
+                        now,
+                    )
+                    for item in items
+                ],
+            )
 
     def list_jobs(self) -> list[dict[str, Any]]:
         self.init()

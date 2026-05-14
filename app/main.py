@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+from dataclasses import asdict
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request, status
@@ -8,6 +9,7 @@ from fastapi.templating import Jinja2Templates
 from .config import get_settings, load_version
 from .database import get_database, path_is_under
 from .runtime import ensure_data_dirs, path_exists
+from .scanner import scan_directory
 from .schemas import CreateJobRequest, JobDetailResponse, JobListResponse, ReviewJob
 
 settings = get_settings()
@@ -102,6 +104,38 @@ def get_job_detail(job_id: str) -> dict:
     job = database.get_job(job_id)
     if job is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="review job not found")
+    return {"job": job, "items": database.list_items(job_id)}
+
+
+@app.post("/api/v1/jobs/{job_id}/scan", response_model=JobDetailResponse)
+def scan_job(job_id: str) -> dict:
+    database = get_database()
+    job = database.get_job(job_id)
+    if job is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="review job not found")
+    if job["status"] not in ("pending", "ready", "failed"):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"job is currently '{job['status']}', cannot start scan",
+        )
+
+    scan_path = Path(job["scan_path"])
+    allowed_roots = (settings.download_root, settings.library_root)
+
+    database.update_job_status(job_id, "running")
+    try:
+        scanned = scan_directory(scan_path, allowed_roots)
+        items_data = [asdict(f) for f in scanned]
+        database.insert_items(job_id, items_data)
+        database.update_job_status(job_id, "ready", total_items=len(items_data))
+    except Exception as exc:
+        database.update_job_status(job_id, "failed")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"scan failed: {exc}",
+        )
+
+    job = database.get_job(job_id)
     return {"job": job, "items": database.list_items(job_id)}
 
 
