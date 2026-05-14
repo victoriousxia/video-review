@@ -1,0 +1,23 @@
+services:
+  video-review:
+    build: .
+    image: video-review:latest
+    container_name: video-review
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      - VIDEO_REVIEW_HOST=0.0.0.0
+      - VIDEO_REVIEW_PORT=8818
+      - VIDEO_REVIEW_DATA_DIR=/app/data
+      - VIDEO_REVIEW_DOWNLOAD_ROOT=/media/download
+      - VIDEO_REVIEW_LIBRARY_ROOT=/media/library
+    volumes:
+      - /vol2/1000/Docker/video-review/data:/app/data
+      - /vol1/1000/Download:/media/download:ro
+      - /vol1/1000/Media:/media/library:rw
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8818/healthz', timeout=3).read()"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s

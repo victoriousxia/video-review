@@ -13,12 +13,16 @@
     .muted { color: #9ca3af; }
     table { width: 100%; border-collapse: collapse; }
     th, td { text-align: left; padding: 10px; border-bottom: 1px solid #374151; vertical-align: top; }
-    pre { overflow-x: auto; }
+    .button { display: inline-block; background: #2563eb; color: white; text-decoration: none; border-radius: 10px; padding: 10px 14px; border: none; cursor: pointer; font-size: 14px; }
+    .button-secondary { background: #4b5563; }
+    .button-small { padding: 5px 10px; font-size: 12px; border-radius: 6px; }
+    .breadcrumb { margin-bottom: 8px; }
+    .breadcrumb a { margin-right: 4px; }
   </style>
 </head>
 <body>
 <main>
-  <p><a href="/jobs">← Review 任务</a></p>
+  <p><a href="/jobs">&larr; Review 任务</a></p>
   <h1>{{ job.name }}</h1>
   <div class="card">
     <p>任务 ID：<code>{{ job.job_id }}</code></p>
@@ -28,10 +32,68 @@
     <p>备注：{{ job.notes or '无' }}</p>
     <p>创建时间：{{ job.created_at }}</p>
     <p>更新时间：{{ job.updated_at }}</p>
+
+    {% if job.status == 'pending' %}
+      <form method="post" action="/jobs/{{ job.job_id }}/scan" style="margin-top:14px">
+        <button type="submit" class="button">开始扫描</button>
+      </form>
+    {% elif job.status in ('ready', 'failed') %}
+      <form method="post" action="/jobs/{{ job.job_id }}/scan" style="margin-top:14px">
+        <button type="submit" class="button button-secondary">重新扫描</button>
+      </form>
+    {% endif %}
   </div>
 
+  {% if current_dir %}
+  <div class="breadcrumb">
+    <a href="/jobs/{{ job.job_id }}">根目录</a>
+    {% set parts = current_dir.split('/') %}
+    {% for part in parts %}
+      {% if not loop.last %}
+        <span>/</span>
+        <a href="/jobs/{{ job.job_id }}?dir={{ '/'.join(parts[:loop.index]) }}">{{ part }}</a>
+      {% else %}
+        <span>/</span>
+        <strong>{{ part }}</strong>
+      {% endif %}
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if subdirs %}
   <div class="card">
-    <h2>视频条目（{{ items | length }}）</h2>
+    <h2>子目录</h2>
+    <table>
+      <thead>
+      <tr>
+        <th>目录名</th>
+        <th>直接文件</th>
+        <th>递归总数</th>
+        <th>待处理</th>
+        <th>已处理</th>
+        <th>操作</th>
+      </tr>
+      </thead>
+      <tbody>
+      {% for sub in subdirs %}
+        <tr>
+          <td><code>{{ sub.name }}</code></td>
+          <td>{{ sub.direct }}</td>
+          <td>{{ sub.total }}</td>
+          <td>{{ sub.pending }}</td>
+          <td>{{ sub.reviewed }}</td>
+          <td>
+            <a class="button button-small" href="/jobs/{{ job.job_id }}?dir={% if current_dir %}{{ current_dir }}/{% endif %}{{ sub.name }}">进入目录</a>
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  <div class="card">
+    <h2>当前目录文件（{{ items | length }}）</h2>
     {% if items %}
       <table>
         <thead>
@@ -46,7 +108,7 @@
         <tbody>
         {% for item in items %}
           <tr>
-            <td>{{ item.file_name }}<br><span class="muted" style="font-size:0.85em">{{ item.folder_path }}</span></td>
+            <td>{{ item.file_name }}</td>
             <td>{{ "%.1f"|format(item.file_size / 1048576) }} MB</td>
             <td><code>{{ item.extension }}</code></td>
             <td>{{ item.file_mtime[:10] if item.file_mtime else '-' }}</td>
@@ -56,14 +118,13 @@
         </tbody>
       </table>
     {% elif job.status == 'pending' %}
-      <p class="muted">任务尚未扫描。通过 API 触发扫描：</p>
-      <pre><code>curl -X POST http://127.0.0.1:8818/api/v1/jobs/{{ job.job_id }}/scan</code></pre>
+      <p class="muted">任务尚未扫描。点击上方"开始扫描"按钮触发扫描。</p>
     {% elif job.status == 'running' %}
       <p class="muted">正在扫描中…</p>
     {% elif job.status == 'failed' %}
-      <p class="muted">扫描失败，请检查日志后重试。</p>
+      <p class="muted">扫描失败，请检查日志后点击"重新扫描"重试。</p>
     {% else %}
-      <p class="muted">扫描完成，未发现视频文件。</p>
+      <p class="muted">当前目录下没有视频文件。</p>
     {% endif %}
   </div>
 </main>

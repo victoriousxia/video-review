@@ -13,15 +13,31 @@
     .muted { color: #9ca3af; }
     table { width: 100%; border-collapse: collapse; }
     th, td { text-align: left; padding: 10px; border-bottom: 1px solid #374151; vertical-align: top; }
+    .button { display: inline-block; background: #2563eb; color: white; text-decoration: none; border-radius: 10px; padding: 10px 14px; border: none; cursor: pointer; font-size: 14px; }
+    .form label { display: block; margin: 12px 0 4px; }
+    .form input[type="text"] { width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid #374151; background: #020617; color: #e5e7eb; box-sizing: border-box; }
+    .form input[type="checkbox"] { margin-right: 6px; }
+    .form button { margin-top: 14px; }
   </style>
 </head>
 <body>
 <main>
   <p><a href="/">← 首页</a></p>
   <h1>Review 任务</h1>
-  <p class="muted">当前版本可以创建任务并持久化到 SQLite，用于跑通 Docker、Lucky、Hermes 编排流程。</p>
 
   <div class="card">
+    <h2>创建 Review 任务</h2>
+    <form method="post" action="/jobs" class="form">
+      <label>任务名称<br><input type="text" name="name" required placeholder="例如：下载目录整理"></label>
+      <label>扫描路径<br><input type="text" name="scan_path" required placeholder="{{ app_settings.download_root }}"></label>
+      <label>备注<br><input type="text" name="notes" placeholder="可选"></label>
+      <label><input type="checkbox" name="scan_now" value="true" checked> 创建后立即扫描</label>
+      <button type="submit" class="button">创建任务</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>任务列表</h2>
     {% if jobs %}
       <table>
         <thead>
@@ -46,11 +62,7 @@
         </tbody>
       </table>
     {% else %}
-      <p class="muted">还没有 Review 任务。</p>
-      <p>可以先用下面的 API 创建测试任务：</p>
-      <pre><code>curl -X POST http://127.0.0.1:8818/api/v1/jobs \
-  -H 'Content-Type: application/json' \
-  -d '{"name":"测试任务","scan_path":"{{ app_settings.download_root }}"}'</code></pre>
+      <p class="muted">还没有 Review 任务。使用上方表单创建第一个任务。</p>
     {% endif %}
   </div>
 </main>

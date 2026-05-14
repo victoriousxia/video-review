@@ -13,7 +13,11 @@
     .muted { color: #9ca3af; }
     .badge { display: inline-block; background: #1d4ed8; color: white; border-radius: 999px; padding: 4px 10px; font-size: 13px; }
     .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
-    .button { display: inline-block; background: #2563eb; color: white; text-decoration: none; border-radius: 10px; padding: 10px 14px; }
+    .button { display: inline-block; background: #2563eb; color: white; text-decoration: none; border-radius: 10px; padding: 10px 14px; border: none; cursor: pointer; font-size: 14px; }
+    .form label { display: block; margin: 12px 0 4px; }
+    .form input[type="text"] { width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid #374151; background: #020617; color: #e5e7eb; box-sizing: border-box; }
+    .form input[type="checkbox"] { margin-right: 6px; }
+    .form button { margin-top: 14px; }
   </style>
 </head>
 <body>
@@ -23,6 +27,17 @@
   <p class="muted">NAS 视频整理 Review 服务。当前版本支持创建 Review 任务、扫描目录下的视频文件并生成条目，不会移动或删除任何视频。</p>
 
   <p><a class="button" href="/jobs">查看 Review 任务</a></p>
+
+  <div class="card">
+    <h2>创建 Review 任务</h2>
+    <form method="post" action="/jobs" class="form">
+      <label>任务名称<br><input type="text" name="name" required placeholder="例如：下载目录整理"></label>
+      <label>扫描路径<br><input type="text" name="scan_path" required placeholder="{{ app_settings.download_root }}"></label>
+      <label>备注<br><input type="text" name="notes" placeholder="可选"></label>
+      <label><input type="checkbox" name="scan_now" value="true" checked> 创建后立即扫描</label>
+      <button type="submit" class="button">创建任务</button>
+    </form>
+  </div>
 
   <div class="card">
     <h2>架构原则</h2>

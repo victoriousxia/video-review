@@ -1,5 +1,46 @@
 # 版本变更记录
 
+## 0.3.2 - 2026-05-15
+
+多层目录 Review 和 Review 状态保存。
+
+新增：
+
+- 任务详情页支持 `?dir=<relative_dir>` 参数浏览子目录。
+- 目录仪表盘：展示子目录列表、直接文件数、递归总数、pending/已处理统计。
+- 每个子目录提供"进入目录"链接，支持逐层浏览。
+- 面包屑导航，方便在目录层级间跳转。
+- 当前目录文件列表只展示当前目录直接文件，不递归。
+- 非法 dir 参数（绝对路径、包含 `..`）返回 400。
+- 新增 `PATCH /api/v1/items/{item_id}` 接口，支持更新 review_status / user_action / user_notes。
+- review_status 可选值：pending、keep、move_later、delete_later、ignore、unsure。
+- API 和 Web 的 `GET /api/v1/jobs/{job_id}?dir=` 支持按目录过滤 items。
+
+限制：
+
+- 当前阶段只写数据库，不移动、不删除、不重命名媒体文件。
+
+## 0.3.1 - 2026-05-15
+
+Web 创建任务和扫描入口。
+
+新增：
+
+- 首页和 `/jobs` 页面顶部增加创建 Review 任务表单。
+- 表单字段：name、scan_path、notes、scan_now。
+- `POST /jobs` 支持 HTML form 创建任务，成功后 303 跳转到任务详情页。
+- scan_now=true 时创建后立即触发扫描。
+- 任务详情页 pending 状态显示"开始扫描"按钮。
+- 任务详情页 ready/failed 状态显示"重新扫描"按钮。
+- `POST /jobs/{job_id}/scan` Web 端点触发扫描后 303 跳转回详情页。
+- 所有 scan_path 仍限制在 /media/download 或 /media/library 下。
+
+修复：
+
+- SQLite additive migration：老库缺少 review_items.extension / file_mtime 字段时自动补齐。
+- 重新扫描不再产生重复 items：使用 replace_items 先删旧再写新。
+- 新增 docker-compose.nas.yml 用于 NAS host network 部署。
+
 ## 0.3.0 - 2026-05-15
 
 真实目录扫描和视频条目生成。

@@ -2,15 +2,15 @@ from contextlib import asynccontextmanager
 from dataclasses import asdict
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Request, status
-from fastapi.responses import HTMLResponse
+from fastapi import FastAPI, Form, HTTPException, Request, status
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from .config import get_settings, load_version
 from .database import get_database, path_is_under
 from .runtime import ensure_data_dirs, path_exists
 from .scanner import scan_directory
-from .schemas import CreateJobRequest, JobDetailResponse, JobListResponse, ReviewJob
+from .schemas import CreateJobRequest, JobDetailResponse, JobListResponse, PatchItemRequest, ReviewItem, ReviewJob
 
 settings = get_settings()
 templates = Jinja2Templates(directory="app/templates")
@@ -73,6 +73,16 @@ def validate_scan_path(scan_path: str) -> str:
     return str(candidate)
 
 
+def validate_dir_param(dir_param: str | None) -> str | None:
+    if dir_param is None or dir_param == "":
+        return None
+    if dir_param.startswith("/"):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="dir must be a relative path")
+    if ".." in dir_param.split("/"):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="dir must not contain '..'")
+    return dir_param
+
+
 @app.get("/healthz")
 def healthz() -> dict:
     return {
@@ -99,12 +109,18 @@ def create_job(request: CreateJobRequest) -> dict:
 
 
 @app.get("/api/v1/jobs/{job_id}", response_model=JobDetailResponse)
-def get_job_detail(job_id: str) -> dict:
+def get_job_detail(job_id: str, dir: str | None = None) -> dict:
+    validated_dir = validate_dir_param(dir)
     database = get_database()
     job = database.get_job(job_id)
     if job is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="review job not found")
-    return {"job": job, "items": database.list_items(job_id)}
+    if validated_dir is not None:
+        folder = job["scan_path"].rstrip("/") + "/" + validated_dir
+        items = database.list_items(job_id, folder_prefix=folder)
+    else:
+        items = database.list_items(job_id)
+    return {"job": job, "items": items}
 
 
 @app.post("/api/v1/jobs/{job_id}/scan", response_model=JobDetailResponse)
@@ -126,7 +142,7 @@ def scan_job(job_id: str) -> dict:
     try:
         scanned = scan_directory(scan_path, allowed_roots)
         items_data = [asdict(f) for f in scanned]
-        database.insert_items(job_id, items_data)
+        database.replace_items(job_id, items_data)
         database.update_job_status(job_id, "ready", total_items=len(items_data))
     except Exception as exc:
         database.update_job_status(job_id, "failed")
@@ -137,6 +153,25 @@ def scan_job(job_id: str) -> dict:
 
     job = database.get_job(job_id)
     return {"job": job, "items": database.list_items(job_id)}
+
+
+@app.patch("/api/v1/items/{item_id}", response_model=ReviewItem)
+def patch_item(item_id: str, body: PatchItemRequest) -> dict:
+    database = get_database()
+    item = database.get_item(item_id)
+    if item is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="item not found")
+
+    updates = {}
+    if body.review_status is not None:
+        updates["review_status"] = body.review_status.value
+    if body.user_action is not None:
+        updates["user_action"] = body.user_action
+    if body.user_notes is not None:
+        updates["user_notes"] = body.user_notes
+
+    updated = database.update_item(item_id, updates)
+    return updated
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -168,11 +203,21 @@ def jobs_page(request: Request):
 
 
 @app.get("/jobs/{job_id}", response_class=HTMLResponse)
-def job_detail_page(request: Request, job_id: str):
+def job_detail_page(request: Request, job_id: str, dir: str | None = None):
+    validated_dir = validate_dir_param(dir)
     database = get_database()
     job = database.get_job(job_id)
     if job is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="review job not found")
+
+    if validated_dir is not None:
+        current_folder = job["scan_path"].rstrip("/") + "/" + validated_dir
+    else:
+        current_folder = job["scan_path"].rstrip("/")
+
+    items = database.list_items(job_id, folder_prefix=current_folder)
+    subdirs = database.directory_stats(job_id, current_folder)
+
     return templates.TemplateResponse(
         request,
         "job_detail.html",
@@ -180,6 +225,58 @@ def job_detail_page(request: Request, job_id: str):
             "version": load_version(),
             "app_settings": settings,
             "job": job,
-            "items": database.list_items(job_id),
+            "items": items,
+            "subdirs": subdirs,
+            "current_dir": validated_dir or "",
         },
     )
+
+
+@app.post("/jobs")
+def create_job_form(
+    name: str = Form(""),
+    scan_path: str = Form(""),
+    notes: str = Form(""),
+    scan_now: str = Form(""),
+):
+    if not name.strip():
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="name is required")
+    validated_path = validate_scan_path(scan_path)
+    job = get_database().create_job(name=name.strip(), scan_path=validated_path, notes=notes.strip())
+    job_id = job["job_id"]
+
+    if scan_now == "true":
+        _run_scan(job_id)
+
+    return RedirectResponse(url=f"/jobs/{job_id}", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@app.post("/jobs/{job_id}/scan")
+def scan_job_web(job_id: str):
+    _run_scan(job_id)
+    return RedirectResponse(url=f"/jobs/{job_id}", status_code=status.HTTP_303_SEE_OTHER)
+
+
+def _run_scan(job_id: str) -> None:
+    database = get_database()
+    job = database.get_job(job_id)
+    if job is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="review job not found")
+    if job["status"] not in ("pending", "ready", "failed"):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"job is currently '{job['status']}', cannot start scan",
+        )
+
+    scan_path = Path(job["scan_path"])
+    allowed_roots = (settings.download_root, settings.library_root)
+
+    database.update_job_status(job_id, "running")
+    try:
+        scanned = scan_directory(scan_path, allowed_roots)
+        items_data = [asdict(f) for f in scanned]
+        database.replace_items(job_id, items_data)
+        database.update_job_status(job_id, "ready", total_items=len(items_data))
+    except Exception:
+        database.update_job_status(job_id, "failed")
+        raise

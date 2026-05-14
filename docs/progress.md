@@ -1,6 +1,6 @@
 # 项目进度
 
-当前版本：0.3.0
+当前版本：0.3.2
 
 远端仓库：`git@github.com:victoriousxia/video-review.git`
 
@@ -52,10 +52,26 @@ NAS 工作目录：`/nas/docker/video-review`
 - 数据库 schema v2：新增 extension、file_mtime 字段
 - 任务详情页展示视频条目表格
 - 测试 conftest 支持 Mac 本地运行（21 个测试全部通过）
+- 发布 v0.3.1 Web 创建任务和扫描入口
+- 首页和 /jobs 页面增加创建 Review 任务表单
+- POST /jobs HTML form 创建任务，303 跳转
+- scan_now=true 创建后立即扫描
+- 任务详情页扫描/重新扫描按钮
+- SQLite additive migration 修复老库缺少 extension/file_mtime 字段
+- replace_items 解决重新扫描重复 items 问题
+- docker-compose.nas.yml 用于 NAS host network 部署
+- 发布 v0.3.2 多层目录 Review 和状态保存
+- 任务详情页支持 ?dir= 参数浏览子目录
+- 目录仪表盘：子目录列表、直接文件数、递归总数、pending/已处理统计
+- 面包屑导航
+- 当前目录文件列表只展示直接文件
+- 非法 dir 参数返回 400
+- PATCH /api/v1/items/{item_id} 支持 review_status / user_action / user_notes
+- 51 个测试全部通过
 
 ## 进行中
 
-- NAS 上构建 v0.3.0 镜像并验证扫描功能。
+- NAS 上构建 v0.3.2 镜像并验证新功能。
 
 ## 待实现
 

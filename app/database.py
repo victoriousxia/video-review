@@ -69,10 +69,18 @@ class Database:
                 );
                 """
             )
+            self._migrate(conn)
             conn.execute(
                 "INSERT OR REPLACE INTO schema_meta(key, value) VALUES (?, ?)",
                 ("schema_version", str(SCHEMA_VERSION)),
             )
+
+    def _migrate(self, conn: sqlite3.Connection) -> None:
+        cols = {row[1] for row in conn.execute("PRAGMA table_info(review_items)").fetchall()}
+        if "extension" not in cols:
+            conn.execute("ALTER TABLE review_items ADD COLUMN extension TEXT NOT NULL DEFAULT ''")
+        if "file_mtime" not in cols:
+            conn.execute("ALTER TABLE review_items ADD COLUMN file_mtime TEXT NOT NULL DEFAULT ''")
 
     def create_job(self, name: str, scan_path: str, notes: str = "") -> dict[str, Any]:
         self.init()
@@ -144,6 +152,35 @@ class Database:
                 ],
             )
 
+    def replace_items(self, job_id: str, items: list[dict[str, Any]]) -> None:
+        now = utc_now_iso()
+        with self.connect() as conn:
+            conn.execute("DELETE FROM review_items WHERE job_id = ?", (job_id,))
+            if items:
+                conn.executemany(
+                    """
+                    INSERT INTO review_items(
+                        item_id, job_id, original_path, folder_path, file_name,
+                        file_size, extension, file_mtime, review_status, created_at, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)
+                    """,
+                    [
+                        (
+                            uuid4().hex,
+                            job_id,
+                            item["original_path"],
+                            item["folder_path"],
+                            item["file_name"],
+                            item["file_size"],
+                            item["extension"],
+                            item["file_mtime"],
+                            now,
+                            now,
+                        )
+                        for item in items
+                    ],
+                )
+
     def list_jobs(self) -> list[dict[str, Any]]:
         self.init()
         with self.connect() as conn:
@@ -158,14 +195,62 @@ class Database:
             row = conn.execute("SELECT * FROM review_jobs WHERE job_id = ?", (job_id,)).fetchone()
         return dict(row) if row else None
 
-    def list_items(self, job_id: str) -> list[dict[str, Any]]:
+    def list_items(self, job_id: str, folder_prefix: str | None = None) -> list[dict[str, Any]]:
+        self.init()
+        with self.connect() as conn:
+            if folder_prefix is None:
+                rows = conn.execute(
+                    "SELECT * FROM review_items WHERE job_id = ? ORDER BY file_name, item_id",
+                    (job_id,),
+                ).fetchall()
+            else:
+                rows = conn.execute(
+                    "SELECT * FROM review_items WHERE job_id = ? AND folder_path = ? ORDER BY file_name, item_id",
+                    (job_id, folder_prefix),
+                ).fetchall()
+        return [dict(row) for row in rows]
+
+    def directory_stats(self, job_id: str, scan_root: str) -> list[dict[str, Any]]:
+        """Get subdirectory statistics for a given root within a job."""
         self.init()
         with self.connect() as conn:
             rows = conn.execute(
-                "SELECT * FROM review_items WHERE job_id = ? ORDER BY file_name, item_id",
+                "SELECT folder_path, review_status FROM review_items WHERE job_id = ?",
                 (job_id,),
             ).fetchall()
-        return [dict(row) for row in rows]
+
+        scan_root_normalized = scan_root.rstrip("/")
+        subdirs: dict[str, dict[str, int]] = {}
+
+        for row in rows:
+            folder = row["folder_path"]
+            if not folder.startswith(scan_root_normalized):
+                continue
+            relative = folder[len(scan_root_normalized):]
+            if relative and not relative.startswith("/"):
+                continue
+            relative = relative.lstrip("/")
+
+            if not relative:
+                continue
+
+            top_dir = relative.split("/")[0]
+            if top_dir not in subdirs:
+                subdirs[top_dir] = {"total": 0, "pending": 0, "reviewed": 0, "direct": 0}
+            subdirs[top_dir]["total"] += 1
+            if row["review_status"] == "pending":
+                subdirs[top_dir]["pending"] += 1
+            else:
+                subdirs[top_dir]["reviewed"] += 1
+
+            parts = relative.split("/")
+            if len(parts) == 1:
+                subdirs[top_dir]["direct"] += 1
+
+        result = []
+        for name, stats in sorted(subdirs.items()):
+            result.append({"name": name, **stats})
+        return result
 
     def schema_info(self) -> dict[str, Any]:
         self.init()
@@ -175,6 +260,26 @@ class Database:
             "path": str(self.path),
             "schema_version": int(row["value"]) if row else SCHEMA_VERSION,
         }
+
+    def get_item(self, item_id: str) -> dict[str, Any] | None:
+        self.init()
+        with self.connect() as conn:
+            row = conn.execute("SELECT * FROM review_items WHERE item_id = ?", (item_id,)).fetchone()
+        return dict(row) if row else None
+
+    def update_item(self, item_id: str, updates: dict[str, Any]) -> dict[str, Any] | None:
+        if not updates:
+            return self.get_item(item_id)
+        now = utc_now_iso()
+        updates["updated_at"] = now
+        set_clause = ", ".join(f"{k} = ?" for k in updates)
+        values = list(updates.values()) + [item_id]
+        with self.connect() as conn:
+            conn.execute(
+                f"UPDATE review_items SET {set_clause} WHERE item_id = ?",
+                values,
+            )
+        return self.get_item(item_id)
 
 
 @lru_cache

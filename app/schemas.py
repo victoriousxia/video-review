@@ -1,12 +1,30 @@
 from __future__ import annotations
 
+from enum import Enum
+from typing import Optional
+
 from pydantic import BaseModel, Field
+
+
+class ReviewStatus(str, Enum):
+    pending = "pending"
+    keep = "keep"
+    move_later = "move_later"
+    delete_later = "delete_later"
+    ignore = "ignore"
+    unsure = "unsure"
 
 
 class CreateJobRequest(BaseModel):
     name: str = Field(min_length=1, max_length=200)
     scan_path: str = Field(min_length=1, max_length=4096)
     notes: str = Field(default="", max_length=2000)
+
+
+class PatchItemRequest(BaseModel):
+    review_status: Optional[ReviewStatus] = None
+    user_action: Optional[str] = Field(default=None, max_length=200)
+    user_notes: Optional[str] = Field(default=None, max_length=4000)
 
 
 class ReviewJob(BaseModel):

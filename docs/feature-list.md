@@ -1,6 +1,6 @@
 # 功能列表
 
-## v0.3.0 已支持
+## v0.3.2 已支持
 
 - 标准 Git 管理的 Docker 项目结构
 - GitHub 协作流程：`victoriousxia/video-review`
@@ -31,13 +31,26 @@
 - Job 状态流转：pending → running → ready/failed
 - 任务详情页展示视频条目表格
 - 测试支持 Mac 本地运行
+- Web 创建任务表单（首页和 /jobs 页面）
+- `POST /jobs` HTML form 创建任务，303 跳转
+- scan_now=true 创建后立即扫描
+- 任务详情页扫描/重新扫描按钮
+- SQLite additive migration 自动补齐老库缺失字段
+- replace_items 解决重新扫描重复问题
+- docker-compose.nas.yml NAS host network 部署
+- 任务详情页 ?dir= 参数浏览子目录
+- 目录仪表盘：子目录列表、直接文件数、递归总数、pending/已处理统计
+- 面包屑导航
+- 当前目录文件列表只展示直接文件
+- 非法 dir 参数返回 400
+- `PATCH /api/v1/items/{item_id}` 支持 review_status / user_action / user_notes
+- review_status 可选值：pending、keep、move_later、delete_later、ignore、unsure
 
-## v0.3.0 未支持
+## v0.3.2 未支持
 
 - ffprobe 元数据提取
 - ffmpeg 截图生成
 - 动态重新生成截图批次
-- Review 决策保存
 - 执行计划 dry-run
 - 文件移回收站操作
 - Hermes 触发通知
@@ -48,7 +61,6 @@
 - 元数据提取
 - 截图批次
 - 动态截图重新生成
-- Review 决策
 - 安全 dry-run 执行计划
 - 回收站优先的安全执行
 - Hermes 消息触发和通知

@@ -48,6 +48,33 @@
 - 不调用 ffprobe，不生成截图，不移动/删除文件。
 - 扫描中遇到无权限或异常文件时记录错误并继续处理其他文件。
 
+## v0.3.1 Web 创建任务和扫描入口
+
+状态：已完成
+
+目标：
+
+- 首页和 /jobs 页面增加创建 Review 任务表单
+- POST /jobs 支持 HTML form 创建任务
+- scan_now=true 时创建后立即扫描
+- 任务详情页提供扫描/重新扫描按钮
+- SQLite additive migration 修复老库兼容
+- replace_items 解决重新扫描重复问题
+- NAS host network 部署 compose
+
+## v0.3.2 多层目录 Review 和状态保存
+
+状态：已完成
+
+目标：
+
+- 任务详情页支持 ?dir= 参数浏览子目录
+- 目录仪表盘展示子目录统计
+- 当前目录文件列表只展示直接文件
+- 非法 dir 参数返回 400
+- PATCH /api/v1/items/{item_id} 支持 review_status / user_action / user_notes
+- 状态值：pending、keep、move_later、delete_later、ignore、unsure
+
 ## v0.4.0 ffprobe 元数据
 
 状态：计划中

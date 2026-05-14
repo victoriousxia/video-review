@@ -1,6 +1,6 @@
 [project]
 name = "video-review"
-version = "0.2.0"
+version = "0.3.2"
 description = "NAS video organization review service with screenshots, decisions, and safe execution planning."
 requires-python = ">=3.11"
 dependencies = [
