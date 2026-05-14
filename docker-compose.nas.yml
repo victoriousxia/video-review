@@ -14,7 +14,7 @@ services:
     volumes:
       - /vol2/1000/Docker/video-review/data:/app/data
       - /vol1/1000/Download:/media/download:ro
-      - /vol1/1000/Media:/media/library:rw
+      - /vol1/1000/Media:/media/library:ro
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8818/healthz', timeout=3).read()"]
       interval: 30s

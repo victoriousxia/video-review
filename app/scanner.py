@@ -5,6 +5,8 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
+from .database import path_is_under
+
 VIDEO_EXTENSIONS: set[str] = {
     ".mp4", ".mkv", ".avi", ".mov", ".wmv", ".flv", ".webm",
     ".m4v", ".ts", ".rmvb", ".rm", ".3gp", ".mpg", ".mpeg",
@@ -38,12 +40,7 @@ class ScannedFile:
 
 
 def scan_directory(root: Path, allowed_roots: tuple[Path, ...]) -> list[ScannedFile]:
-    root_str = str(root)
-    for allowed in allowed_roots:
-        allowed_str = str(allowed).rstrip("/")
-        if root_str == allowed_str or root_str.startswith(allowed_str + "/"):
-            break
-    else:
+    if not any(path_is_under(root, allowed) for allowed in allowed_roots):
         raise ValueError(f"scan path {root} is not under any allowed root")
 
     if not root.exists():

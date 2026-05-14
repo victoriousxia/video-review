@@ -288,6 +288,10 @@ def get_database() -> Database:
 
 
 def path_is_under(candidate: Path, root: Path) -> bool:
-    candidate_text = str(candidate)
-    root_text = str(root)
-    return candidate_text == root_text or candidate_text.startswith(root_text.rstrip("/") + "/")
+    try:
+        candidate_resolved = candidate.resolve(strict=False)
+        root_resolved = root.resolve(strict=False)
+        candidate_resolved.relative_to(root_resolved)
+    except (OSError, ValueError):
+        return False
+    return True

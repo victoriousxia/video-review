@@ -71,7 +71,8 @@ NAS 工作目录：`/nas/docker/video-review`
 
 ## 进行中
 
-- NAS 上构建 v0.3.2 镜像并验证新功能。
+- NAS 上已完成 v0.3.2 镜像构建、正式部署和功能验收。
+- Hermes 审查发现并已修复两个发布前安全/一致性问题：路径校验改为 resolve + relative_to，媒体库挂载改为只读。
 
 ## 待实现
 
@@ -88,13 +89,16 @@ NAS 工作目录：`/nas/docker/video-review`
 - GitHub SSH deploy key 之前已验证可用于 `victoriousxia/video-review`。
 - `docker build -t video-review:v0.2.0 .` 之前已在 NAS 上成功，不需要 `apt-get`，也不需要改 Docker daemon DNS。
 - 当前正式运行容器名：`video-review`。
-- 当前正式运行镜像：`video-review:v0.2.0`。
+- 当前正式运行镜像：`video-review:v0.3.2`。
 - 当前正式运行模式：`--network host`，应用直接监听 NAS 宿主网络 `0.0.0.0:8818`。
 - 当前数据挂载：`/vol2/1000/Docker/video-review/data -> /app/data`。
-- 当前媒体挂载：`/vol1/1000/Download -> /media/download:ro`，`/vol1/1000/Media -> /media/library:rw`。
-- 容器内部已验证：`GET /`、`GET /healthz`、`GET /jobs`、`GET /api/v1/info`、`GET /api/v1/jobs` 正常。
-- 用户已从同一局域网浏览器验证：`http://192.168.5.2:8818/` 可以正常访问 Web 页面。
-- 单元测试之前在项目镜像真实挂载路径下通过：`8 passed`。
+- 当前媒体挂载：`/vol1/1000/Download -> /media/download:ro`，`/vol1/1000/Media -> /media/library:ro`。
+- 容器内部已验证：`GET /healthz`、`GET /api/v1/info`、`GET /api/v1/jobs` 正常。
+- 老 SQLite 数据库已在启动时迁移到 schema v2，`review_items.extension` 和 `review_items.file_mtime` 存在。
+- 单元测试在项目镜像真实挂载路径下通过：`54 passed`。
+- 已用 Web form 创建 `Hermes v0.3.2 验收任务`，scan_now 成功扫描真实 NAS 目录，生成 2 个条目。
+- 已验证 `PATCH /api/v1/items/{item_id}` 只更新数据库 Review 状态/备注，不操作媒体文件。
+- 已验证非法目录参数 `?dir=../x` 返回 400。
 
 ## 重要环境记录
 
