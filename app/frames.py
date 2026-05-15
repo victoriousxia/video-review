@@ -32,6 +32,9 @@ def generate_frames_with_progress(
     output_dir: Path,
     count: int = 9,
     quality: int = 2,
+    max_width: int = 0,
+    skip_percent: int = 5,
+    timeout: int = 30,
     on_progress: Callable[[int, int], None] | None = None,
 ) -> list[str]:
     if output_dir.exists():
@@ -42,27 +45,35 @@ def generate_frames_with_progress(
     if duration <= 0:
         raise RuntimeError(f"invalid video duration: {duration}")
 
+    skip_fraction = max(0, min(skip_percent, 45)) / 100.0
+    start_time = duration * skip_fraction
+    end_time = duration * (1 - skip_fraction)
+    effective_duration = end_time - start_time
+
     timestamps = []
     for i in range(count):
-        t = duration * (i + 1) / (count + 1)
+        t = start_time + effective_duration * (i + 1) / (count + 1)
         timestamps.append(t)
+
+    vf_filters: list[str] = []
+    if max_width > 0:
+        vf_filters.append(f"scale='min({max_width},iw)':-2")
 
     filenames: list[str] = []
     for idx, ts in enumerate(timestamps):
         filename = f"frame_{idx:03d}.jpg"
         out_path = output_dir / filename
-        subprocess.run(
-            [
-                "ffmpeg", "-y", "-v", "quiet",
-                "-ss", f"{ts:.3f}",
-                "-i", str(video_path),
-                "-frames:v", "1",
-                "-qscale:v", str(quality),
-                str(out_path),
-            ],
-            capture_output=True,
-            timeout=30,
-        )
+        cmd = [
+            "ffmpeg", "-y", "-v", "quiet",
+            "-ss", f"{ts:.3f}",
+            "-i", str(video_path),
+            "-frames:v", "1",
+            "-qscale:v", str(quality),
+        ]
+        if vf_filters:
+            cmd += ["-vf", ",".join(vf_filters)]
+        cmd.append(str(out_path))
+        subprocess.run(cmd, capture_output=True, timeout=timeout)
         if out_path.exists():
             filenames.append(filename)
         if on_progress:

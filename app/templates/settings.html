@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>设置 - video-review</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif; background: #09090b; color: #fafafa; min-height: 100vh; }
+    main { max-width: 620px; margin: 0 auto; padding: 40px 20px 80px; }
+    a { color: #a1a1aa; text-decoration: none; }
+    a:hover { color: #fafafa; }
+
+    .back-link { font-size: 13px; display: inline-flex; align-items: center; gap: 6px; margin-bottom: 24px; }
+    h1 { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 32px; }
+
+    .section-title { font-size: 13px; font-weight: 500; color: #71717a; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 14px; margin-top: 32px; }
+
+    .card {
+      background: #18181b; border: 1px solid #27272a; border-radius: 14px;
+      padding: 20px; margin-bottom: 16px;
+    }
+
+    .setting-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 0; border-bottom: 1px solid #27272a;
+    }
+    .setting-row:last-child { border-bottom: none; }
+    .setting-label { font-size: 14px; }
+    .setting-desc { font-size: 12px; color: #52525b; margin-top: 2px; }
+    .setting-input {
+      width: 80px; padding: 6px 10px; font-size: 14px; text-align: center;
+      background: #09090b; border: 1px solid #27272a; border-radius: 8px;
+      color: #fafafa; outline: none;
+    }
+    .setting-input:focus { border-color: #3b82f6; }
+
+    .resource-stat {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 0; border-bottom: 1px solid #27272a;
+    }
+    .resource-stat:last-child { border-bottom: none; }
+    .resource-label { font-size: 14px; }
+    .resource-value { font-size: 14px; color: #a1a1aa; font-variant-numeric: tabular-nums; }
+
+    .btn {
+      padding: 8px 16px; font-size: 13px; font-weight: 500;
+      border: none; border-radius: 8px; cursor: pointer; transition: opacity 0.2s;
+    }
+    .btn:hover { opacity: 0.85; }
+    .btn-primary { background: #fafafa; color: #09090b; }
+    .btn-danger { background: #450a0a; color: #f87171; border: 1px solid #7f1d1d; }
+    .btn-danger:hover { background: #7f1d1d; }
+
+    .actions { display: flex; gap: 10px; margin-top: 20px; }
+
+    .toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+      background: #18181b; border: 1px solid #27272a; border-radius: 10px;
+      padding: 10px 20px; font-size: 13px; color: #4ade80;
+      display: none; z-index: 100; box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    }
+    .toast.show { display: block; }
+  </style>
+</head>
+<body>
+<main>
+  <a class="back-link" href="/">&larr; 返回首页</a>
+  <h1>设置</h1>
+
+  <p class="section-title">帧生成</p>
+  <div class="card">
+    <div class="setting-row">
+      <div>
+        <div class="setting-label">每组帧数</div>
+        <div class="setting-desc">每个视频截取的帧数量（1-30）</div>
+      </div>
+      <input class="setting-input" type="number" id="framesCount" min="1" max="30" value="{{ settings.frames_count }}">
+    </div>
+    <div class="setting-row">
+      <div>
+        <div class="setting-label">图片质量</div>
+        <div class="setting-desc">JPEG 质量等级，1=最高 10=最低（ffmpeg qscale）</div>
+      </div>
+      <input class="setting-input" type="number" id="framesQuality" min="1" max="10" value="{{ settings.frames_quality }}">
+    </div>
+    <div class="setting-row">
+      <div>
+        <div class="setting-label">并发数</div>
+        <div class="setting-desc">同时生成帧的任务数（1-8）</div>
+      </div>
+      <input class="setting-input" type="number" id="framesWorkers" min="1" max="8" value="{{ settings.frames_workers }}">
+    </div>
+    <div class="setting-row">
+      <div>
+        <div class="setting-label">最大宽度</div>
+        <div class="setting-desc">帧图最大宽度像素，0=原始尺寸（0-3840）</div>
+      </div>
+      <input class="setting-input" type="number" id="framesMaxWidth" min="0" max="3840" value="{{ settings.frames_max_width }}">
+    </div>
+    <div class="setting-row">
+      <div>
+        <div class="setting-label">跳过首尾</div>
+        <div class="setting-desc">跳过视频首尾百分比，避免黑屏/片头片尾（0-45%）</div>
+      </div>
+      <input class="setting-input" type="number" id="framesSkipPercent" min="0" max="45" value="{{ settings.frames_skip_percent }}">
+    </div>
+    <div class="setting-row">
+      <div>
+        <div class="setting-label">超时时间</div>
+        <div class="setting-desc">单帧 ffmpeg 超时秒数（5-120）</div>
+      </div>
+      <input class="setting-input" type="number" id="framesTimeout" min="5" max="120" value="{{ settings.frames_timeout }}">
+    </div>
+    <div class="actions">
+      <button class="btn btn-primary" onclick="saveSettings()">保存设置</button>
+    </div>
+  </div>
+
+  <p class="section-title">资源管理</p>
+  <div class="card">
+    <div class="resource-stat">
+      <span class="resource-label">帧图目录</span>
+      <span class="resource-value" id="framesDir">{{ settings.frames_dir }}</span>
+    </div>
+    <div class="resource-stat">
+      <span class="resource-label">占用空间</span>
+      <span class="resource-value" id="diskSize">{{ settings.frames_disk_size_mb }} MB</span>
+    </div>
+    <div class="resource-stat">
+      <span class="resource-label">帧图文件数</span>
+      <span class="resource-value" id="diskCount">{{ settings.frames_disk_count }} 张</span>
+    </div>
+    <div class="actions">
+      <button class="btn btn-danger" onclick="clearFrames()">清理全部帧图</button>
+    </div>
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+function showToast(msg, color) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.color = color || '#4ade80';
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+async function saveSettings() {
+  const body = {
+    frames_count: parseInt(document.getElementById('framesCount').value),
+    frames_quality: parseInt(document.getElementById('framesQuality').value),
+    frames_workers: parseInt(document.getElementById('framesWorkers').value),
+    frames_max_width: parseInt(document.getElementById('framesMaxWidth').value),
+    frames_skip_percent: parseInt(document.getElementById('framesSkipPercent').value),
+    frames_timeout: parseInt(document.getElementById('framesTimeout').value),
+  };
+  try {
+    const res = await fetch('/api/v1/settings', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if (res.ok) {
+      showToast('设置已保存');
+    } else {
+      showToast('保存失败', '#f87171');
+    }
+  } catch (e) {
+    showToast('请求失败', '#f87171');
+  }
+}
+
+async function clearFrames() {
+  if (!confirm('确定要清理全部已生成的帧图吗？此操作不可恢复。')) return;
+  try {
+    const res = await fetch('/api/v1/settings/clear-frames', { method: 'POST' });
+    if (res.ok) {
+      const data = await res.json();
+      showToast('已清理 ' + data.removed_items + ' 个视频的帧图');
+      document.getElementById('diskSize').textContent = '0.0 MB';
+      document.getElementById('diskCount').textContent = '0 张';
+    } else {
+      showToast('清理失败', '#f87171');
+    }
+  } catch (e) {
+    showToast('请求失败', '#f87171');
+  }
+}
+</script>
+</body>
+</html>

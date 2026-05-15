@@ -24,11 +24,17 @@ class FrameWorker:
         max_workers: int = 2,
         default_count: int = 9,
         default_quality: int = 2,
+        default_max_width: int = 0,
+        default_skip_percent: int = 5,
+        default_timeout: int = 30,
     ):
         self._frames_dir = frames_dir
         self._max_workers = max_workers
         self._default_count = default_count
         self._default_quality = default_quality
+        self._default_max_width = default_max_width
+        self._default_skip_percent = default_skip_percent
+        self._default_timeout = default_timeout
         self._executor = ThreadPoolExecutor(max_workers=max_workers)
         self._lock = threading.Lock()
         self._tasks: dict[str, FrameTaskStatus] = {}
@@ -88,6 +94,9 @@ class FrameWorker:
                 output_dir,
                 count=self._default_count,
                 quality=self._default_quality,
+                max_width=self._default_max_width,
+                skip_percent=self._default_skip_percent,
+                timeout=self._default_timeout,
                 on_progress=on_progress,
             )
             with self._lock:

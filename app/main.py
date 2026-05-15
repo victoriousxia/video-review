@@ -42,6 +42,9 @@ frame_worker = FrameWorker(
     max_workers=settings.frames_workers,
     default_count=settings.frames_count,
     default_quality=settings.frames_quality,
+    default_max_width=settings.frames_max_width,
+    default_skip_percent=settings.frames_skip_percent,
+    default_timeout=settings.frames_timeout,
 )
 
 
@@ -337,3 +340,116 @@ def _run_scan(job_id: str) -> None:
     except Exception:
         database.update_job_status(job_id, "failed")
         raise
+
+
+@app.get("/settings", response_class=HTMLResponse)
+def settings_page(request: Request):
+    frames_dir = settings.frames_dir
+    frames_size = 0
+    frames_count = 0
+    if frames_dir.exists():
+        for f in frames_dir.rglob("*.jpg"):
+            frames_size += f.stat().st_size
+            frames_count += 1
+    return templates.TemplateResponse(
+        request,
+        "settings.html",
+        {
+            "version": load_version(),
+            "settings": {
+                "frames_count": settings.frames_count,
+                "frames_quality": settings.frames_quality,
+                "frames_workers": settings.frames_workers,
+                "frames_max_width": settings.frames_max_width,
+                "frames_skip_percent": settings.frames_skip_percent,
+                "frames_timeout": settings.frames_timeout,
+                "frames_dir": str(frames_dir),
+                "frames_disk_size_mb": round(frames_size / 1048576, 1),
+                "frames_disk_count": frames_count,
+            },
+        },
+    )
+
+
+@app.get("/api/v1/settings")
+def get_settings_api() -> dict:
+    frames_dir = settings.frames_dir
+    frames_size = 0
+    frames_file_count = 0
+    item_dirs = 0
+    if frames_dir.exists():
+        for d in frames_dir.iterdir():
+            if d.is_dir():
+                item_dirs += 1
+                for f in d.iterdir():
+                    if f.suffix == ".jpg":
+                        frames_size += f.stat().st_size
+                        frames_file_count += 1
+    return {
+        "frames_count": settings.frames_count,
+        "frames_quality": settings.frames_quality,
+        "frames_workers": settings.frames_workers,
+        "frames_max_width": settings.frames_max_width,
+        "frames_skip_percent": settings.frames_skip_percent,
+        "frames_timeout": settings.frames_timeout,
+        "frames_dir": str(frames_dir),
+        "frames_disk_size_mb": round(frames_size / 1048576, 1),
+        "frames_disk_files": frames_file_count,
+        "frames_disk_items": item_dirs,
+    }
+
+
+@app.patch("/api/v1/settings")
+def update_settings_api(body: dict) -> dict:
+    updated = {}
+    if "frames_count" in body:
+        val = int(body["frames_count"])
+        if 1 <= val <= 30:
+            settings.frames_count = val
+            frame_worker._default_count = val
+            updated["frames_count"] = val
+    if "frames_quality" in body:
+        val = int(body["frames_quality"])
+        if 1 <= val <= 10:
+            settings.frames_quality = val
+            frame_worker._default_quality = val
+            updated["frames_quality"] = val
+    if "frames_workers" in body:
+        val = int(body["frames_workers"])
+        if 1 <= val <= 8:
+            settings.frames_workers = val
+            frame_worker._executor._max_workers = val
+            updated["frames_workers"] = val
+    if "frames_max_width" in body:
+        val = int(body["frames_max_width"])
+        if 0 <= val <= 3840:
+            settings.frames_max_width = val
+            frame_worker._default_max_width = val
+            updated["frames_max_width"] = val
+    if "frames_skip_percent" in body:
+        val = int(body["frames_skip_percent"])
+        if 0 <= val <= 45:
+            settings.frames_skip_percent = val
+            frame_worker._default_skip_percent = val
+            updated["frames_skip_percent"] = val
+    if "frames_timeout" in body:
+        val = int(body["frames_timeout"])
+        if 5 <= val <= 120:
+            settings.frames_timeout = val
+            frame_worker._default_timeout = val
+            updated["frames_timeout"] = val
+    return {"updated": updated}
+
+
+@app.post("/api/v1/settings/clear-frames")
+def clear_all_frames() -> dict:
+    import shutil
+    frames_dir = settings.frames_dir
+    removed = 0
+    if frames_dir.exists():
+        for d in list(frames_dir.iterdir()):
+            if d.is_dir():
+                shutil.rmtree(d)
+                removed += 1
+    frame_worker._tasks.clear()
+    return {"removed_items": removed}

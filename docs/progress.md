@@ -71,30 +71,42 @@ NAS 工作目录：`/nas/docker/video-review`
 
 ## 进行中
 
-- v0.3.3 前端重设计：首页极简化 + 任务详情页交互重做
+- v0.3.4 设置模块：帧生成参数配置 + 资源管理
 
-### v0.3.3 设计思路与架构
+### v0.3.4 设置模块
 
-**目标**：让 Web UI 从"开发调试面板"变成"实际可用的 Review 工具"。
+**设置页面** `/settings`：
+- 帧生成参数可配置：每组帧数、图片质量、并发数、最大宽度、跳过首尾百分比、超时时间
+- 资源管理：查看帧图目录路径、占用空间、文件数量
+- 一键清理全部已生成帧图
+- API：GET/PATCH `/api/v1/settings`、POST `/api/v1/settings/clear-frames`
 
-**设计原则**：
-- 首页只保留核心操作：创建任务 + 任务列表
-- 目录选择改为点击浏览（弹窗 + 面包屑导航），不再手动输入路径
-- 任务详情页以"方便 review"为核心，多级目录用卡片网格 + 进度可视化
-- 文件 review 操作即时生效（fetch PATCH），无需刷新页面
-- 统一深色现代风格（#09090b 背景、#18181b 卡片、大圆角、留白）
+**新增配置项**：
+- `frames_max_width`：帧图最大宽度像素（0=原始尺寸），缩小输出节省磁盘
+- `frames_skip_percent`：跳过视频首尾百分比（默认5%），避免黑屏/片头片尾
+- `frames_timeout`：单帧 ffmpeg 超时秒数（默认30s）
 
-**架构改动**：
-1. 新增 `GET /api/v1/browse` 目录浏览 API（安全校验 + 只返回子目录）
-2. 首页 index.html 重写：目录点选弹窗、卡片式任务列表
-3. 任务详情页 job_detail.html 重写：
-   - 子目录网格卡片（颜色编码进度：绿=完成、蓝=进行中、灰=未开始）
-   - 文件列表带快捷 review 按钮组（保留/待移动/待删除/忽略/不确定）
-   - 点击按钮通过 PATCH API 即时更新状态
-4. database.py：update_item 时自动维护 job 的 reviewed_items 计数
-5. 删除冗余的 jobs.html 和 `/jobs` GET 路由（首页已覆盖）
+**帧生成增强**：
+- ffmpeg 输出支持 scale 滤镜按 max_width 缩放
+- 时间点计算跳过首尾指定百分比区间
+- 超时时间可配置
 
-### v0.3.3 TODO
+### v0.3.3 已完成（前端重设计 + 帧生成）
+
+**UI 重设计**：
+- 首页极简化：目录点选弹窗、卡片式任务列表、去除无关信息
+- 任务详情页：子目录网格卡片（进度可视化）、文件操作按钮（预览/整理/删除）
+- 统一深色现代风格
+
+**帧生成系统**：
+- `app/frames.py`：ffprobe 获取时长 + ffmpeg 均匀时间点截取 JPEG 帧
+- `app/frame_worker.py`：ThreadPoolExecutor 队列管理，限制并发（默认 2），内存状态跟踪（idle/queued/generating/done/failed），逐帧进度回调
+- 异步 API：POST 提交任务立即返回，GET 轮询状态 + 进度
+- 前端每秒轮询，实时显示"排队中/生成中 3/9..."，完成后自动渲染帧图
+- 支持重新生成（force=true）、重复提交自动忽略
+- 配置项：frames_count、frames_quality、frames_workers
+
+### v0.3.3 TODO（全部完成）
 
 - [x] 首页去除配置/安全/接口/能力/架构等无关卡片
 - [x] 首页添加目录点选弹窗（browse API + JS modal）
@@ -102,7 +114,9 @@ NAS 工作目录：`/nas/docker/video-review`
 - [x] 首页标题加大、删除备注字段
 - [x] 任务详情页重写：统一深色风格
 - [x] 子目录改为网格卡片 + 进度可视化 + 颜色编码
-- [x] 文件列表添加即时 review 按钮组
+- [x] 文件操作改为：预览/整理(占位)/删除
+- [x] 帧生成模块（ffprobe + ffmpeg）
+- [x] 异步队列 + 状态管理 + 前端轮询
 - [x] reviewed_items 计数逻辑（pending↔非pending 自动增减）
 - [x] 删除 jobs.html 和对应路由
 - [x] 测试全部通过（53 passed）

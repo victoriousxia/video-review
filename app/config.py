@@ -18,6 +18,9 @@ class Settings(BaseSettings):
     frames_count: int = Field(default=9, alias="VIDEO_REVIEW_FRAMES_COUNT")
     frames_quality: int = Field(default=2, alias="VIDEO_REVIEW_FRAMES_QUALITY")
     frames_workers: int = Field(default=2, alias="VIDEO_REVIEW_FRAMES_WORKERS")
+    frames_max_width: int = Field(default=0, alias="VIDEO_REVIEW_FRAMES_MAX_WIDTH")
+    frames_skip_percent: int = Field(default=5, alias="VIDEO_REVIEW_FRAMES_SKIP_PERCENT")
+    frames_timeout: int = Field(default=30, alias="VIDEO_REVIEW_FRAMES_TIMEOUT")
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
