@@ -340,6 +340,40 @@ def delete_job_web(job_id: str):
     return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
 
 
+@app.post("/api/v1/jobs/{job_id}/delete-files")
+def delete_marked_files(job_id: str, dir: str | None = None) -> dict:
+    database = get_database()
+    job = database.get_job(job_id)
+    if job is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="review job not found")
+
+    validated_dir = validate_dir_param(dir)
+    if validated_dir is not None:
+        folder_prefix = job["scan_path"].rstrip("/") + "/" + validated_dir
+    else:
+        folder_prefix = job["scan_path"].rstrip("/")
+
+    items = database.list_items_by_status(job_id, "delete_later", folder_prefix=folder_prefix)
+
+    deleted = []
+    failed = []
+    for item in items:
+        file_path = Path(item["original_path"])
+        try:
+            if file_path.exists():
+                file_path.unlink()
+                deleted.append(item["item_id"])
+            else:
+                deleted.append(item["item_id"])
+        except OSError as e:
+            failed.append({"item_id": item["item_id"], "error": str(e)})
+
+    if deleted:
+        database.remove_items(deleted)
+
+    return {"deleted": len(deleted), "failed": len(failed), "errors": failed}
+
+
 def _run_scan(job_id: str) -> None:
     database = get_database()
     job = database.get_job(job_id)

@@ -427,9 +427,23 @@ document.addEventListener('keydown', function(e) {
   else if (e.key === 'ArrowRight') { _lightboxIndex = (_lightboxIndex + 1) % _lightboxFrames.length; showLightboxFrame(); }
 });
 
-function confirmDeleteFiles() {
+async function confirmDeleteFiles() {
   if (!confirm('确定要删除当前目录下所有标记为"待删除"的文件吗？此操作不可恢复。')) return;
-  alert('文件删除功能开发中，敬请期待。');
+  const jobId = '{{ job.job_id }}';
+  const dir = '{{ current_dir }}';
+  const url = '/api/v1/jobs/' + jobId + '/delete-files' + (dir ? '?dir=' + encodeURIComponent(dir) : '');
+  try {
+    const res = await fetch(url, { method: 'POST' });
+    if (res.ok) {
+      const data = await res.json();
+      alert('已删除 ' + data.deleted + ' 个文件' + (data.failed > 0 ? '，' + data.failed + ' 个失败' : ''));
+      location.reload();
+    } else {
+      alert('删除失败');
+    }
+  } catch (e) {
+    alert('请求失败');
+  }
 }
 </script>
 </body>

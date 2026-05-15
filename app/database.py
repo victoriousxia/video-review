@@ -215,6 +215,40 @@ class Database:
                 ).fetchone()
         return row["cnt"] if row else 0
 
+    def list_items_by_status(self, job_id: str, review_status: str, folder_prefix: str | None = None) -> list[dict[str, Any]]:
+        with self.connect() as conn:
+            if folder_prefix:
+                rows = conn.execute(
+                    "SELECT * FROM review_items WHERE job_id = ? AND review_status = ? AND folder_path LIKE ?",
+                    (job_id, review_status, folder_prefix + "%"),
+                ).fetchall()
+            else:
+                rows = conn.execute(
+                    "SELECT * FROM review_items WHERE job_id = ? AND review_status = ?",
+                    (job_id, review_status),
+                ).fetchall()
+        return [dict(row) for row in rows]
+
+    def remove_items(self, item_ids: list[str]) -> None:
+        if not item_ids:
+            return
+        with self.connect() as conn:
+            for item_id in item_ids:
+                old = conn.execute(
+                    "SELECT review_status, job_id FROM review_items WHERE item_id = ?", (item_id,)
+                ).fetchone()
+                if old and old["review_status"] != "pending":
+                    conn.execute(
+                        "UPDATE review_jobs SET reviewed_items = MAX(0, reviewed_items - 1), total_items = MAX(0, total_items - 1) WHERE job_id = ?",
+                        (old["job_id"],),
+                    )
+                elif old:
+                    conn.execute(
+                        "UPDATE review_jobs SET total_items = MAX(0, total_items - 1) WHERE job_id = ?",
+                        (old["job_id"],),
+                    )
+                conn.execute("DELETE FROM review_items WHERE item_id = ?", (item_id,))
+
     def list_items(self, job_id: str, folder_prefix: str | None = None) -> list[dict[str, Any]]:
         self.init()
         with self.connect() as conn:
