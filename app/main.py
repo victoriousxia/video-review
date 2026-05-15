@@ -9,7 +9,8 @@ from fastapi.templating import Jinja2Templates
 
 from .config import get_settings, load_version
 from .database import get_database, path_is_under
-from .frames import generate_frames, list_frames
+from .frame_worker import FrameWorker
+from .frames import list_frames
 from .runtime import ensure_data_dirs, path_exists
 from .scanner import scan_directory
 from .schemas import CreateJobRequest, JobDetailResponse, JobListResponse, PatchItemRequest, ReviewItem, ReviewJob
@@ -35,6 +36,13 @@ except OSError:
     _frames_dir = Path(tempfile.mkdtemp())
 
 app.mount("/frames", StaticFiles(directory=str(_frames_dir)), name="frames")
+
+frame_worker = FrameWorker(
+    frames_dir=_frames_dir,
+    max_workers=settings.frames_workers,
+    default_count=settings.frames_count,
+    default_quality=settings.frames_quality,
+)
 
 
 def service_info() -> dict:
@@ -186,28 +194,17 @@ def patch_item(item_id: str, body: PatchItemRequest) -> dict:
 
 
 @app.post("/api/v1/items/{item_id}/frames")
-def generate_item_frames(item_id: str) -> dict:
+def generate_item_frames(item_id: str, force: bool = False) -> dict:
     database = get_database()
     item = database.get_item(item_id)
     if item is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="item not found")
 
-    video_path = Path(item["original_path"])
-    if not video_path.exists():
+    video_path = item["original_path"]
+    if not Path(video_path).exists():
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="video file not found on disk")
 
-    output_dir = settings.frames_dir / item_id
-    try:
-        filenames = generate_frames(
-            video_path, output_dir,
-            count=settings.frames_count,
-            quality=settings.frames_quality,
-        )
-    except RuntimeError as exc:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc))
-
-    urls = [f"/frames/{item_id}/{f}" for f in filenames]
-    return {"frames": urls}
+    return frame_worker.submit(item_id, video_path, force=force)
 
 
 @app.get("/api/v1/items/{item_id}/frames")
@@ -217,10 +214,7 @@ def get_item_frames(item_id: str) -> dict:
     if item is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="item not found")
 
-    output_dir = settings.frames_dir / item_id
-    filenames = list_frames(output_dir)
-    urls = [f"/frames/{item_id}/{f}" for f in filenames]
-    return {"frames": urls}
+    return frame_worker.get_status(item_id)
 
 
 @app.get("/api/v1/browse")

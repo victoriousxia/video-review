@@ -3,6 +3,7 @@ from __future__ import annotations
 import shutil
 import subprocess
 from pathlib import Path
+from typing import Callable
 
 
 def get_duration(video_path: Path) -> float:
@@ -23,6 +24,16 @@ def get_duration(video_path: Path) -> float:
 
 
 def generate_frames(video_path: Path, output_dir: Path, count: int = 9, quality: int = 2) -> list[str]:
+    return generate_frames_with_progress(video_path, output_dir, count, quality)
+
+
+def generate_frames_with_progress(
+    video_path: Path,
+    output_dir: Path,
+    count: int = 9,
+    quality: int = 2,
+    on_progress: Callable[[int, int], None] | None = None,
+) -> list[str]:
     if output_dir.exists():
         shutil.rmtree(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -54,6 +65,8 @@ def generate_frames(video_path: Path, output_dir: Path, count: int = 9, quality:
         )
         if out_path.exists():
             filenames.append(filename)
+        if on_progress:
+            on_progress(idx + 1, count)
 
     if not filenames:
         raise RuntimeError("ffmpeg produced no frames")

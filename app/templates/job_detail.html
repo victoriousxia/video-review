@@ -234,55 +234,39 @@
 </div>
 
 <script>
+const _pollers = {};
+
 async function togglePreview(btn) {
   const card = btn.closest('.file-card');
   const itemId = card.dataset.itemId;
   const panel = card.querySelector('.frames-panel');
   const grid = panel.querySelector('.frames-grid');
 
-  if (panel.classList.contains('open') && grid.children.length > 0) {
+  if (panel.classList.contains('open') && grid.querySelector('img')) {
     panel.classList.remove('open');
     return;
   }
 
   panel.classList.add('open');
+  grid.innerHTML = '<div class="frames-loading"><span class="spinner"></span>检查中...</div>';
 
-  const existingRes = await fetch('/api/v1/items/' + itemId + '/frames');
-  const existingData = await existingRes.json();
+  const statusData = await fetchStatus(itemId);
 
-  if (existingData.frames && existingData.frames.length > 0) {
-    renderFrames(grid, existingData.frames, btn);
+  if (statusData.status === 'done' && statusData.frames.length > 0) {
+    renderFrames(grid, statusData.frames, btn);
     return;
   }
 
-  grid.innerHTML = '<div class="frames-loading"><span class="spinner"></span>正在生成预览帧...</div>';
-
-  try {
-    const res = await fetch('/api/v1/items/' + itemId + '/frames', { method: 'POST' });
-    if (!res.ok) {
-      const err = await res.json();
-      grid.innerHTML = '<div class="frames-loading" style="color:#f87171">生成失败: ' + (err.detail || '未知错误') + '</div>';
-      return;
-    }
-    const data = await res.json();
-    renderFrames(grid, data.frames, btn);
-  } catch (e) {
-    grid.innerHTML = '<div class="frames-loading" style="color:#f87171">请求失败</div>';
+  if (statusData.status === 'idle' || statusData.status === 'failed') {
+    grid.innerHTML = '<div class="frames-loading"><span class="spinner"></span>已提交生成任务...</div>';
+    await fetch('/api/v1/items/' + itemId + '/frames', { method: 'POST' });
+    startPolling(itemId, grid, btn);
+    return;
   }
-}
 
-function renderFrames(grid, frames, previewBtn) {
-  grid.innerHTML = frames.map(url =>
-    '<img src="' + url + '" onclick="openLightbox(this.src)" loading="lazy">'
-  ).join('');
-
-  const actions = previewBtn.parentElement;
-  if (!actions.querySelector('.btn-regen')) {
-    const regenBtn = document.createElement('button');
-    regenBtn.className = 'action-btn btn-regen';
-    regenBtn.textContent = '重新生成';
-    regenBtn.onclick = function() { regenerateFrames(this); };
-    actions.insertBefore(regenBtn, previewBtn.nextSibling);
+  if (statusData.status === 'queued' || statusData.status === 'generating') {
+    updateLoadingText(grid, statusData);
+    startPolling(itemId, grid, btn);
   }
 }
 
@@ -292,21 +276,57 @@ async function regenerateFrames(btn) {
   const panel = card.querySelector('.frames-panel');
   const grid = panel.querySelector('.frames-grid');
 
-  grid.innerHTML = '<div class="frames-loading"><span class="spinner"></span>重新生成中...</div>';
+  grid.innerHTML = '<div class="frames-loading"><span class="spinner"></span>已提交重新生成...</div>';
+  await fetch('/api/v1/items/' + itemId + '/frames?force=true', { method: 'POST' });
+  startPolling(itemId, grid, btn);
+}
 
-  try {
-    const res = await fetch('/api/v1/items/' + itemId + '/frames', { method: 'POST' });
-    if (!res.ok) {
-      const err = await res.json();
-      grid.innerHTML = '<div class="frames-loading" style="color:#f87171">生成失败: ' + (err.detail || '未知错误') + '</div>';
-      return;
+function startPolling(itemId, grid, previewBtn) {
+  if (_pollers[itemId]) return;
+  _pollers[itemId] = setInterval(async () => {
+    const data = await fetchStatus(itemId);
+    if (data.status === 'done') {
+      stopPolling(itemId);
+      renderFrames(grid, data.frames, previewBtn);
+    } else if (data.status === 'failed') {
+      stopPolling(itemId);
+      grid.innerHTML = '<div class="frames-loading" style="color:#f87171">生成失败: ' + (data.error || '未知错误') + '</div>';
+    } else {
+      updateLoadingText(grid, data);
     }
-    const data = await res.json();
-    grid.innerHTML = data.frames.map(url =>
-      '<img src="' + url + '?t=' + Date.now() + '" onclick="openLightbox(this.src)" loading="lazy">'
-    ).join('');
-  } catch (e) {
-    grid.innerHTML = '<div class="frames-loading" style="color:#f87171">请求失败</div>';
+  }, 1000);
+}
+
+function stopPolling(itemId) {
+  if (_pollers[itemId]) {
+    clearInterval(_pollers[itemId]);
+    delete _pollers[itemId];
+  }
+}
+
+function updateLoadingText(grid, data) {
+  const text = data.status === 'queued' ? '排队中...' : '生成中 ' + (data.progress || '') + '...';
+  grid.innerHTML = '<div class="frames-loading"><span class="spinner"></span>' + text + '</div>';
+}
+
+async function fetchStatus(itemId) {
+  const res = await fetch('/api/v1/items/' + itemId + '/frames');
+  return await res.json();
+}
+
+function renderFrames(grid, frames, previewBtn) {
+  const ts = Date.now();
+  grid.innerHTML = frames.map(url =>
+    '<img src="' + url + '?t=' + ts + '" onclick="openLightbox(this.src)" loading="lazy">'
+  ).join('');
+
+  const actions = previewBtn.parentElement;
+  if (!actions.querySelector('.btn-regen')) {
+    const regenBtn = document.createElement('button');
+    regenBtn.className = 'action-btn btn-regen';
+    regenBtn.textContent = '重新生成';
+    regenBtn.onclick = function() { regenerateFrames(this); };
+    actions.insertBefore(regenBtn, previewBtn.nextSibling);
   }
 }
 

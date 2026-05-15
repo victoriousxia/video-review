@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     app_token: str = Field(default="", alias="VIDEO_REVIEW_APP_TOKEN")
     frames_count: int = Field(default=9, alias="VIDEO_REVIEW_FRAMES_COUNT")
     frames_quality: int = Field(default=2, alias="VIDEO_REVIEW_FRAMES_QUALITY")
+    frames_workers: int = Field(default=2, alias="VIDEO_REVIEW_FRAMES_WORKERS")
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
