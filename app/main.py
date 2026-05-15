@@ -216,19 +216,6 @@ def index(request: Request):
     )
 
 
-@app.get("/jobs", response_class=HTMLResponse)
-def jobs_page(request: Request):
-    return templates.TemplateResponse(
-        request,
-        "jobs.html",
-        {
-            "version": load_version(),
-            "app_settings": settings,
-            "jobs": get_database().list_jobs(),
-        },
-    )
-
-
 @app.get("/jobs/{job_id}", response_class=HTMLResponse)
 def job_detail_page(request: Request, job_id: str, dir: str | None = None):
     validated_dir = validate_dir_param(dir)

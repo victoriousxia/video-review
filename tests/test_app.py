@@ -45,14 +45,13 @@ def test_index_page_renders():
     assert "新建任务" in response.text
 
 
-def test_jobs_page_renders_empty_state():
+def test_index_page_renders_empty_jobs():
     client = TestClient(app)
 
-    response = client.get("/jobs")
+    response = client.get("/")
 
     assert response.status_code == 200
-    assert "Review 任务" in response.text
-    assert "还没有 Review 任务" in response.text
+    assert "还没有任务" in response.text
 
 
 def test_can_create_and_read_review_job_via_api(tmp_path, monkeypatch):

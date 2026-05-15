@@ -275,6 +275,23 @@ class Database:
         set_clause = ", ".join(f"{k} = ?" for k in updates)
         values = list(updates.values()) + [item_id]
         with self.connect() as conn:
+            if "review_status" in updates:
+                old = conn.execute(
+                    "SELECT review_status, job_id FROM review_items WHERE item_id = ?", (item_id,)
+                ).fetchone()
+                if old:
+                    old_status = old["review_status"]
+                    new_status = updates["review_status"]
+                    if old_status == "pending" and new_status != "pending":
+                        conn.execute(
+                            "UPDATE review_jobs SET reviewed_items = reviewed_items + 1, updated_at = ? WHERE job_id = ?",
+                            (now, old["job_id"]),
+                        )
+                    elif old_status != "pending" and new_status == "pending":
+                        conn.execute(
+                            "UPDATE review_jobs SET reviewed_items = MAX(0, reviewed_items - 1), updated_at = ? WHERE job_id = ?",
+                            (now, old["job_id"]),
+                        )
             conn.execute(
                 f"UPDATE review_items SET {set_clause} WHERE item_id = ?",
                 values,

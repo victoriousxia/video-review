@@ -153,10 +153,10 @@ def test_index_page_shows_create_form(tmp_path, monkeypatch):
     assert 'name="name"' in page.text
 
 
-def test_jobs_page_shows_create_form(tmp_path, monkeypatch):
+def test_index_page_shows_create_form(tmp_path, monkeypatch):
     _media, client = _setup(tmp_path, monkeypatch)
 
-    page = client.get("/jobs")
+    page = client.get("/")
     assert page.status_code == 200
     assert 'name="scan_path"' in page.text
     assert 'name="name"' in page.text

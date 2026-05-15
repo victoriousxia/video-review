@@ -5,128 +5,214 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{ job.name }} - video-review</title>
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 0; background: #0f172a; color: #e5e7eb; }
-    main { max-width: 1040px; margin: 0 auto; padding: 32px 18px; }
-    a { color: #93c5fd; }
-    .card { background: #111827; border: 1px solid #374151; border-radius: 16px; padding: 20px; margin: 16px 0; }
-    code { background: #020617; padding: 2px 6px; border-radius: 6px; }
-    .muted { color: #9ca3af; }
-    table { width: 100%; border-collapse: collapse; }
-    th, td { text-align: left; padding: 10px; border-bottom: 1px solid #374151; vertical-align: top; }
-    .button { display: inline-block; background: #2563eb; color: white; text-decoration: none; border-radius: 10px; padding: 10px 14px; border: none; cursor: pointer; font-size: 14px; }
-    .button-secondary { background: #4b5563; }
-    .button-small { padding: 5px 10px; font-size: 12px; border-radius: 6px; }
-    .breadcrumb { margin-bottom: 8px; }
-    .breadcrumb a { margin-right: 4px; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif; background: #09090b; color: #fafafa; min-height: 100vh; }
+    main { max-width: 820px; margin: 0 auto; padding: 40px 20px 80px; }
+    a { color: #a1a1aa; text-decoration: none; }
+    a:hover { color: #fafafa; }
+
+    .back-link { font-size: 13px; display: inline-flex; align-items: center; gap: 6px; margin-bottom: 24px; }
+
+    .job-header { margin-bottom: 32px; }
+    .job-header-top { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+    .job-header h1 { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; flex: 1; }
+
+    .badge {
+      display: inline-block; font-size: 11px; font-weight: 500; padding: 3px 8px;
+      border-radius: 6px; text-transform: uppercase; letter-spacing: 0.03em;
+    }
+    .badge-pending { background: #27272a; color: #a1a1aa; }
+    .badge-running { background: #172554; color: #60a5fa; }
+    .badge-ready { background: #052e16; color: #4ade80; }
+    .badge-failed { background: #450a0a; color: #f87171; }
+
+    .job-meta { font-size: 13px; color: #71717a; margin-bottom: 12px; }
+    .job-progress { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+    .progress-bar { flex: 1; height: 6px; background: #27272a; border-radius: 3px; overflow: hidden; }
+    .progress-fill { height: 100%; background: #3b82f6; border-radius: 3px; transition: width 0.3s; }
+    .progress-text { font-size: 13px; color: #a1a1aa; white-space: nowrap; }
+
+    .scan-btn {
+      padding: 8px 16px; font-size: 13px; font-weight: 500;
+      background: #fafafa; color: #09090b; border: none; border-radius: 8px;
+      cursor: pointer; transition: opacity 0.2s;
+    }
+    .scan-btn:hover { opacity: 0.85; }
+    .scan-btn.secondary { background: #27272a; color: #a1a1aa; }
+    .scan-btn.secondary:hover { color: #fafafa; }
+
+    .breadcrumb {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 4px;
+      font-size: 13px; color: #71717a; margin-bottom: 24px; padding: 10px 16px;
+      background: #18181b; border-radius: 10px; border: 1px solid #27272a;
+    }
+    .breadcrumb a { color: #a1a1aa; }
+    .breadcrumb a:hover { color: #fafafa; }
+    .breadcrumb .sep { color: #3f3f46; }
+    .breadcrumb .current { color: #fafafa; font-weight: 500; }
+
+    .section-title { font-size: 13px; font-weight: 500; color: #71717a; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 14px; }
+
+    .dir-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; margin-bottom: 32px; }
+    .dir-card {
+      display: block; text-decoration: none; color: inherit;
+      background: #18181b; border: 1px solid #27272a; border-radius: 12px;
+      padding: 14px 16px; transition: border-color 0.2s, background 0.2s;
+      cursor: pointer;
+    }
+    .dir-card:hover { border-color: #3f3f46; background: #1c1c1f; }
+    .dir-card.complete { border-color: #166534; }
+    .dir-card.in-progress { border-color: #1e40af; }
+    .dir-card-name { font-size: 14px; font-weight: 500; margin-bottom: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .dir-card-stats { font-size: 12px; color: #71717a; margin-bottom: 8px; }
+    .dir-card .progress-bar { height: 4px; }
+
+    .file-list { display: flex; flex-direction: column; gap: 6px; }
+    .file-item {
+      display: flex; align-items: center; gap: 12px;
+      background: #18181b; border: 1px solid #27272a; border-radius: 12px;
+      padding: 12px 16px; transition: border-color 0.2s;
+    }
+    .file-item:hover { border-color: #3f3f46; }
+    .file-info { flex: 1; min-width: 0; }
+    .file-name { font-size: 14px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .file-meta { font-size: 12px; color: #52525b; margin-top: 2px; }
+
+    .review-actions { display: flex; gap: 4px; flex-shrink: 0; flex-wrap: wrap; }
+    .review-btn {
+      padding: 4px 10px; font-size: 11px; font-weight: 500;
+      border: 1px solid #27272a; border-radius: 6px;
+      background: transparent; color: #71717a; cursor: pointer;
+      transition: all 0.15s; white-space: nowrap;
+    }
+    .review-btn:hover { border-color: #3f3f46; color: #a1a1aa; }
+    .review-btn.active-keep { background: #052e16; border-color: #166534; color: #4ade80; }
+    .review-btn.active-move_later { background: #172554; border-color: #1e40af; color: #60a5fa; }
+    .review-btn.active-delete_later { background: #450a0a; border-color: #7f1d1d; color: #f87171; }
+    .review-btn.active-ignore { background: #27272a; border-color: #3f3f46; color: #a1a1aa; }
+    .review-btn.active-unsure { background: #422006; border-color: #92400e; color: #fbbf24; }
+
+    .empty-state { text-align: center; padding: 40px 20px; color: #52525b; font-size: 14px; }
   </style>
 </head>
 <body>
 <main>
-  <p><a href="/jobs">&larr; Review 任务</a></p>
-  <h1>{{ job.name }}</h1>
-  <div class="card">
-    <p>任务 ID：<code>{{ job.job_id }}</code></p>
-    <p>扫描路径：<code>{{ job.scan_path }}</code></p>
-    <p>状态：<code>{{ job.status }}</code></p>
-    <p>进度：<code>{{ job.reviewed_items }} / {{ job.total_items }}</code></p>
-    <p>备注：{{ job.notes or '无' }}</p>
-    <p>创建时间：{{ job.created_at }}</p>
-    <p>更新时间：{{ job.updated_at }}</p>
+  <a class="back-link" href="/">&larr; 返回首页</a>
 
+  <div class="job-header">
+    <div class="job-header-top">
+      <h1>{{ job.name }}</h1>
+      <span class="badge badge-{{ job.status }}">{{ job.status }}</span>
+    </div>
+    <div class="job-meta">{{ job.scan_path }}</div>
+    <div class="job-progress">
+      <div class="progress-bar">
+        {% if job.total_items > 0 %}
+        <div class="progress-fill" style="width: {{ (job.reviewed_items / job.total_items * 100) | int }}%"></div>
+        {% endif %}
+      </div>
+      <span class="progress-text">{{ job.reviewed_items }} / {{ job.total_items }} 已审阅</span>
+    </div>
     {% if job.status == 'pending' %}
-      <form method="post" action="/jobs/{{ job.job_id }}/scan" style="margin-top:14px">
-        <button type="submit" class="button">开始扫描</button>
+      <form method="post" action="/jobs/{{ job.job_id }}/scan" style="display:inline">
+        <button type="submit" class="scan-btn">开始扫描</button>
       </form>
     {% elif job.status in ('ready', 'failed') %}
-      <form method="post" action="/jobs/{{ job.job_id }}/scan" style="margin-top:14px">
-        <button type="submit" class="button button-secondary">重新扫描</button>
+      <form method="post" action="/jobs/{{ job.job_id }}/scan" style="display:inline">
+        <button type="submit" class="scan-btn secondary">重新扫描</button>
       </form>
     {% endif %}
   </div>
 
-  {% if current_dir %}
+  <!-- Breadcrumb -->
   <div class="breadcrumb">
     <a href="/jobs/{{ job.job_id }}">根目录</a>
-    {% set parts = current_dir.split('/') %}
-    {% for part in parts %}
-      {% if not loop.last %}
-        <span>/</span>
-        <a href="/jobs/{{ job.job_id }}?dir={{ '/'.join(parts[:loop.index]) }}">{{ part }}</a>
-      {% else %}
-        <span>/</span>
-        <strong>{{ part }}</strong>
-      {% endif %}
+    {% if current_dir %}
+      {% set parts = current_dir.split('/') %}
+      {% for part in parts %}
+        <span class="sep">/</span>
+        {% if not loop.last %}
+          <a href="/jobs/{{ job.job_id }}?dir={{ '/'.join(parts[:loop.index]) }}">{{ part }}</a>
+        {% else %}
+          <span class="current">{{ part }}</span>
+        {% endif %}
+      {% endfor %}
+    {% endif %}
+  </div>
+
+  <!-- Subdirectories -->
+  {% if subdirs %}
+  <p class="section-title">子目录</p>
+  <div class="dir-grid">
+    {% for sub in subdirs %}
+      <a class="dir-card {% if sub.total > 0 and sub.reviewed == sub.total %}complete{% elif sub.reviewed > 0 %}in-progress{% endif %}"
+         href="/jobs/{{ job.job_id }}?dir={% if current_dir %}{{ current_dir }}/{% endif %}{{ sub.name }}">
+        <div class="dir-card-name">{{ sub.name }}</div>
+        <div class="dir-card-stats">{{ sub.reviewed }} / {{ sub.total }} 已审阅</div>
+        <div class="progress-bar">
+          <div class="progress-fill" style="width: {% if sub.total > 0 %}{{ (sub.reviewed / sub.total * 100) | int }}{% else %}0{% endif %}%"></div>
+        </div>
+      </a>
     {% endfor %}
   </div>
   {% endif %}
 
-  {% if subdirs %}
-  <div class="card">
-    <h2>子目录</h2>
-    <table>
-      <thead>
-      <tr>
-        <th>目录名</th>
-        <th>直接文件</th>
-        <th>递归总数</th>
-        <th>待处理</th>
-        <th>已处理</th>
-        <th>操作</th>
-      </tr>
-      </thead>
-      <tbody>
-      {% for sub in subdirs %}
-        <tr>
-          <td><code>{{ sub.name }}</code></td>
-          <td>{{ sub.direct }}</td>
-          <td>{{ sub.total }}</td>
-          <td>{{ sub.pending }}</td>
-          <td>{{ sub.reviewed }}</td>
-          <td>
-            <a class="button button-small" href="/jobs/{{ job.job_id }}?dir={% if current_dir %}{{ current_dir }}/{% endif %}{{ sub.name }}">进入目录</a>
-          </td>
-        </tr>
-      {% endfor %}
-      </tbody>
-    </table>
+  <!-- Files in current directory -->
+  <p class="section-title">文件（{{ items | length }}）</p>
+  {% if items %}
+  <div class="file-list">
+    {% for item in items %}
+    <div class="file-item" data-item-id="{{ item.item_id }}">
+      <div class="file-info">
+        <div class="file-name">{{ item.file_name }}</div>
+        <div class="file-meta">{{ "%.1f"|format(item.file_size / 1048576) }} MB &middot; {{ item.extension }}</div>
+      </div>
+      <div class="review-actions">
+        <button class="review-btn {% if item.review_status == 'keep' %}active-keep{% endif %}" data-status="keep" onclick="setStatus(this)">保留</button>
+        <button class="review-btn {% if item.review_status == 'move_later' %}active-move_later{% endif %}" data-status="move_later" onclick="setStatus(this)">待移动</button>
+        <button class="review-btn {% if item.review_status == 'delete_later' %}active-delete_later{% endif %}" data-status="delete_later" onclick="setStatus(this)">待删除</button>
+        <button class="review-btn {% if item.review_status == 'ignore' %}active-ignore{% endif %}" data-status="ignore" onclick="setStatus(this)">忽略</button>
+        <button class="review-btn {% if item.review_status == 'unsure' %}active-unsure{% endif %}" data-status="unsure" onclick="setStatus(this)">不确定</button>
+      </div>
+    </div>
+    {% endfor %}
   </div>
+  {% elif job.status == 'pending' %}
+    <div class="empty-state">任务尚未扫描，点击上方"开始扫描"按钮</div>
+  {% elif job.status == 'running' %}
+    <div class="empty-state">正在扫描中...</div>
+  {% elif job.status == 'failed' %}
+    <div class="empty-state">扫描失败，请重新扫描</div>
+  {% else %}
+    <div class="empty-state">当前目录下没有视频文件</div>
   {% endif %}
-
-  <div class="card">
-    <h2>当前目录文件（{{ items | length }}）</h2>
-    {% if items %}
-      <table>
-        <thead>
-        <tr>
-          <th>文件名</th>
-          <th>大小</th>
-          <th>扩展名</th>
-          <th>修改时间</th>
-          <th>状态</th>
-        </tr>
-        </thead>
-        <tbody>
-        {% for item in items %}
-          <tr>
-            <td>{{ item.file_name }}</td>
-            <td>{{ "%.1f"|format(item.file_size / 1048576) }} MB</td>
-            <td><code>{{ item.extension }}</code></td>
-            <td>{{ item.file_mtime[:10] if item.file_mtime else '-' }}</td>
-            <td><code>{{ item.review_status }}</code></td>
-          </tr>
-        {% endfor %}
-        </tbody>
-      </table>
-    {% elif job.status == 'pending' %}
-      <p class="muted">任务尚未扫描。点击上方"开始扫描"按钮触发扫描。</p>
-    {% elif job.status == 'running' %}
-      <p class="muted">正在扫描中…</p>
-    {% elif job.status == 'failed' %}
-      <p class="muted">扫描失败，请检查日志后点击"重新扫描"重试。</p>
-    {% else %}
-      <p class="muted">当前目录下没有视频文件。</p>
-    {% endif %}
-  </div>
 </main>
+
+<script>
+async function setStatus(btn) {
+  const item = btn.closest('.file-item');
+  const itemId = item.dataset.itemId;
+  const status = btn.dataset.status;
+
+  const buttons = item.querySelectorAll('.review-btn');
+  buttons.forEach(b => {
+    b.className = 'review-btn';
+  });
+  btn.classList.add('active-' + status);
+
+  try {
+    const res = await fetch('/api/v1/items/' + itemId, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ review_status: status })
+    });
+    if (!res.ok) {
+      btn.classList.remove('active-' + status);
+    }
+  } catch (e) {
+    btn.classList.remove('active-' + status);
+  }
+}
+</script>
 </body>
 </html>
