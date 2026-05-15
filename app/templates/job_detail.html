@@ -124,10 +124,26 @@
 
     .lightbox {
       display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9);
-      z-index: 1000; align-items: center; justify-content: center; cursor: pointer;
+      z-index: 1000; align-items: center; justify-content: center;
     }
     .lightbox.open { display: flex; }
-    .lightbox img { max-width: 90vw; max-height: 90vh; border-radius: 8px; }
+    .lightbox img { max-width: 85vw; max-height: 85vh; border-radius: 8px; }
+    .lightbox-nav {
+      position: absolute; top: 50%; transform: translateY(-50%);
+      width: 48px; height: 48px; border-radius: 50%;
+      background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
+      color: #fafafa; font-size: 22px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.2s;
+    }
+    .lightbox-nav:hover { background: rgba(255,255,255,0.25); }
+    .lightbox-nav.prev { left: 20px; }
+    .lightbox-nav.next { right: 20px; }
+    .lightbox-counter {
+      position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%);
+      font-size: 13px; color: #a1a1aa; background: rgba(0,0,0,0.6);
+      padding: 4px 12px; border-radius: 6px;
+    }
 
     .empty-state { text-align: center; padding: 40px 20px; color: #52525b; font-size: 14px; }
   </style>
@@ -159,6 +175,9 @@
         <button type="submit" class="scan-btn secondary">重新扫描</button>
       </form>
     {% endif %}
+      <form method="post" action="/jobs/{{ job.job_id }}/delete" style="display:inline;margin-left:8px" onsubmit="return confirm('确定删除此任务？所有条目数据将一并删除。')">
+        <button type="submit" class="scan-btn secondary" style="color:#f87171;border-color:#7f1d1d">删除任务</button>
+      </form>
   </div>
 
   <!-- Breadcrumb -->
@@ -229,8 +248,11 @@
 </main>
 
 <!-- Lightbox -->
-<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+<div class="lightbox" id="lightbox" onclick="onLightboxClick(event)">
+  <button class="lightbox-nav prev" onclick="navLightbox(-1)">&lsaquo;</button>
   <img id="lightboxImg" src="" alt="">
+  <button class="lightbox-nav next" onclick="navLightbox(1)">&rsaquo;</button>
+  <div class="lightbox-counter" id="lightboxCounter"></div>
 </div>
 
 <script>
@@ -363,8 +385,31 @@ async function toggleDelete(btn) {
 
 function openLightbox(src) {
   event.stopPropagation();
-  document.getElementById('lightboxImg').src = src;
+  const img = event.target;
+  const grid = img.closest('.frames-grid');
+  _lightboxFrames = Array.from(grid.querySelectorAll('img')).map(i => i.src);
+  _lightboxIndex = _lightboxFrames.indexOf(src);
+  if (_lightboxIndex < 0) _lightboxIndex = 0;
+  showLightboxFrame();
   document.getElementById('lightbox').classList.add('open');
+}
+
+let _lightboxFrames = [];
+let _lightboxIndex = 0;
+
+function showLightboxFrame() {
+  document.getElementById('lightboxImg').src = _lightboxFrames[_lightboxIndex];
+  document.getElementById('lightboxCounter').textContent = (_lightboxIndex + 1) + ' / ' + _lightboxFrames.length;
+}
+
+function navLightbox(dir) {
+  event.stopPropagation();
+  _lightboxIndex = (_lightboxIndex + dir + _lightboxFrames.length) % _lightboxFrames.length;
+  showLightboxFrame();
+}
+
+function onLightboxClick(e) {
+  if (e.target === document.getElementById('lightbox')) closeLightbox();
 }
 
 function closeLightbox() {
@@ -372,7 +417,10 @@ function closeLightbox() {
 }
 
 document.addEventListener('keydown', function(e) {
+  if (!document.getElementById('lightbox').classList.contains('open')) return;
   if (e.key === 'Escape') closeLightbox();
+  else if (e.key === 'ArrowLeft') { _lightboxIndex = (_lightboxIndex - 1 + _lightboxFrames.length) % _lightboxFrames.length; showLightboxFrame(); }
+  else if (e.key === 'ArrowRight') { _lightboxIndex = (_lightboxIndex + 1) % _lightboxFrames.length; showLightboxFrame(); }
 });
 </script>
 </body>

@@ -195,6 +195,12 @@ class Database:
             row = conn.execute("SELECT * FROM review_jobs WHERE job_id = ?", (job_id,)).fetchone()
         return dict(row) if row else None
 
+    def delete_job(self, job_id: str) -> bool:
+        with self.connect() as conn:
+            conn.execute("DELETE FROM review_items WHERE job_id = ?", (job_id,))
+            cur = conn.execute("DELETE FROM review_jobs WHERE job_id = ?", (job_id,))
+        return cur.rowcount > 0
+
     def list_items(self, job_id: str, folder_prefix: str | None = None) -> list[dict[str, Any]]:
         self.init()
         with self.connect() as conn:

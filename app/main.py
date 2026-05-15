@@ -299,10 +299,11 @@ def create_job_form(
     notes: str = Form(""),
     scan_now: str = Form(""),
 ):
-    if not name.strip():
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="name is required")
     validated_path = validate_scan_path(scan_path)
-    job = get_database().create_job(name=name.strip(), scan_path=validated_path, notes=notes.strip())
+    job_name = name.strip() or Path(validated_path).name
+    if not job_name:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="name is required")
+    job = get_database().create_job(name=job_name, scan_path=validated_path, notes=notes.strip())
     job_id = job["job_id"]
 
     if scan_now == "true":
@@ -315,6 +316,26 @@ def create_job_form(
 def scan_job_web(job_id: str):
     _run_scan(job_id)
     return RedirectResponse(url=f"/jobs/{job_id}", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@app.delete("/api/v1/jobs/{job_id}")
+def delete_job_api(job_id: str) -> dict:
+    database = get_database()
+    job = database.get_job(job_id)
+    if job is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="review job not found")
+    database.delete_job(job_id)
+    return {"deleted": job_id}
+
+
+@app.post("/jobs/{job_id}/delete")
+def delete_job_web(job_id: str):
+    database = get_database()
+    job = database.get_job(job_id)
+    if job is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="review job not found")
+    database.delete_job(job_id)
+    return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
 
 
 def _run_scan(job_id: str) -> None:
