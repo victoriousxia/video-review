@@ -219,15 +219,14 @@
   <div class="file-list">
     {% for item in items %}
     <div class="file-card {% if item.review_status == 'delete_later' %}marked-delete{% endif %}" data-item-id="{{ item.item_id }}">
-      <div class="file-card-main">
+      <div class="file-card-main" onclick="togglePreview(this)" style="cursor:pointer">
         <div class="file-info">
           <div class="file-name">{{ item.file_name }}</div>
           <div class="file-meta">{{ "%.1f"|format(item.file_size / 1048576) }} MB &middot; {{ item.extension }}{% if item.review_status == 'delete_later' %} &middot; <span style="color:#f87171">待删除</span>{% endif %}</div>
         </div>
         <div class="file-actions">
-          <button class="action-btn btn-preview" onclick="togglePreview(this)">预览</button>
-          <button class="action-btn btn-organize" title="开发中" disabled>整理</button>
-          <button class="action-btn btn-delete {% if item.review_status == 'delete_later' %}active{% endif %}" onclick="toggleDelete(this)">删除</button>
+          <button class="action-btn btn-organize" title="开发中" disabled onclick="event.stopPropagation()">整理</button>
+          <button class="action-btn btn-delete {% if item.review_status == 'delete_later' %}active{% endif %}" onclick="event.stopPropagation();toggleDelete(this)">删除</button>
         </div>
       </div>
       <div class="frames-panel">
@@ -250,7 +249,7 @@
 <!-- Lightbox -->
 <div class="lightbox" id="lightbox" onclick="onLightboxClick(event)">
   <button class="lightbox-nav prev" onclick="navLightbox(-1)">&lsaquo;</button>
-  <img id="lightboxImg" src="" alt="">
+  <img id="lightboxImg" src="" alt="" onclick="event.stopPropagation();closeLightbox()">
   <button class="lightbox-nav next" onclick="navLightbox(1)">&rsaquo;</button>
   <div class="lightbox-counter" id="lightboxCounter"></div>
 </div>
@@ -336,19 +335,19 @@ async function fetchStatus(itemId) {
   return await res.json();
 }
 
-function renderFrames(grid, frames, previewBtn) {
+function renderFrames(grid, frames, cardMain) {
   const ts = Date.now();
   grid.innerHTML = frames.map(url =>
     '<img src="' + url + '?t=' + ts + '" onclick="openLightbox(this.src)" loading="lazy">'
   ).join('');
 
-  const actions = previewBtn.parentElement;
-  if (!actions.querySelector('.btn-regen')) {
+  const actions = cardMain.querySelector('.file-actions');
+  if (actions && !actions.querySelector('.btn-regen')) {
     const regenBtn = document.createElement('button');
     regenBtn.className = 'action-btn btn-regen';
     regenBtn.textContent = '重新生成';
-    regenBtn.onclick = function() { regenerateFrames(this); };
-    actions.insertBefore(regenBtn, previewBtn.nextSibling);
+    regenBtn.onclick = function(e) { e.stopPropagation(); regenerateFrames(this); };
+    actions.appendChild(regenBtn);
   }
 }
 
