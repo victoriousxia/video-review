@@ -277,6 +277,7 @@ def job_detail_page(request: Request, job_id: str, dir: str | None = None):
 
     items = database.list_items(job_id, folder_prefix=current_folder)
     subdirs = database.directory_stats(job_id, current_folder)
+    delete_count = database.count_items_by_status(job_id, "delete_later", folder_prefix=current_folder)
 
     return templates.TemplateResponse(
         request,
@@ -288,6 +289,7 @@ def job_detail_page(request: Request, job_id: str, dir: str | None = None):
             "items": items,
             "subdirs": subdirs,
             "current_dir": validated_dir or "",
+            "delete_count": delete_count,
         },
     )
 

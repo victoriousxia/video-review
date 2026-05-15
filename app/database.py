@@ -201,6 +201,20 @@ class Database:
             cur = conn.execute("DELETE FROM review_jobs WHERE job_id = ?", (job_id,))
         return cur.rowcount > 0
 
+    def count_items_by_status(self, job_id: str, review_status: str, folder_prefix: str | None = None) -> int:
+        with self.connect() as conn:
+            if folder_prefix:
+                row = conn.execute(
+                    "SELECT COUNT(*) as cnt FROM review_items WHERE job_id = ? AND review_status = ? AND folder_path LIKE ?",
+                    (job_id, review_status, folder_prefix + "%"),
+                ).fetchone()
+            else:
+                row = conn.execute(
+                    "SELECT COUNT(*) as cnt FROM review_items WHERE job_id = ? AND review_status = ?",
+                    (job_id, review_status),
+                ).fetchone()
+        return row["cnt"] if row else 0
+
     def list_items(self, job_id: str, folder_prefix: str | None = None) -> list[dict[str, Any]]:
         self.init()
         with self.connect() as conn:

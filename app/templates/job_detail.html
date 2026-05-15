@@ -40,6 +40,8 @@
     .scan-btn:hover { opacity: 0.85; }
     .scan-btn.secondary { background: #27272a; color: #a1a1aa; }
     .scan-btn.secondary:hover { color: #fafafa; }
+    .scan-btn.danger { background: #450a0a; color: #f87171; border: 1px solid #7f1d1d; }
+    .scan-btn.danger:hover { background: #7f1d1d; }
 
     .breadcrumb {
       display: flex; flex-wrap: wrap; align-items: center; gap: 4px;
@@ -174,6 +176,9 @@
       <form method="post" action="/jobs/{{ job.job_id }}/scan" style="display:inline">
         <button type="submit" class="scan-btn secondary">重新扫描</button>
       </form>
+    {% endif %}
+    {% if delete_count > 0 %}
+      <button class="scan-btn danger" onclick="confirmDeleteFiles()" style="margin-left:8px">删除文件（{{ delete_count }}）</button>
     {% endif %}
       <form method="post" action="/jobs/{{ job.job_id }}/delete" style="display:inline;margin-left:8px" onsubmit="return confirm('确定删除此任务？所有条目数据将一并删除。')">
         <button type="submit" class="scan-btn secondary" style="color:#f87171;border-color:#7f1d1d">删除任务</button>
@@ -421,6 +426,11 @@ document.addEventListener('keydown', function(e) {
   else if (e.key === 'ArrowLeft') { _lightboxIndex = (_lightboxIndex - 1 + _lightboxFrames.length) % _lightboxFrames.length; showLightboxFrame(); }
   else if (e.key === 'ArrowRight') { _lightboxIndex = (_lightboxIndex + 1) % _lightboxFrames.length; showLightboxFrame(); }
 });
+
+function confirmDeleteFiles() {
+  if (!confirm('确定要删除当前目录下所有标记为"待删除"的文件吗？此操作不可恢复。')) return;
+  alert('文件删除功能开发中，敬请期待。');
+}
 </script>
 </body>
 </html>

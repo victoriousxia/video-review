@@ -81,16 +81,6 @@
 
     .job-card-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; font-size: 12px; color: #52525b; }
 
-    .job-delete-btn {
-      position: absolute; top: 12px; right: 12px;
-      width: 24px; height: 24px; border-radius: 6px;
-      background: transparent; border: 1px solid transparent;
-      color: #52525b; font-size: 16px; cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      transition: all 0.15s; z-index: 2;
-    }
-    .job-delete-btn:hover { background: #450a0a; border-color: #7f1d1d; color: #f87171; }
-
     .empty-state { text-align: center; padding: 40px 20px; color: #52525b; font-size: 14px; }
 
     /* Directory picker modal */
@@ -169,27 +159,24 @@
   <p class="section-title">任务列表</p>
   {% if jobs %}
     {% for job in jobs %}
-      <div class="job-card" style="position:relative">
-        <a href="/jobs/{{ job.job_id }}" style="text-decoration:none;color:inherit;display:block">
-          <div class="job-card-header">
-            <span class="job-card-name">{{ job.name }}</span>
-            <span class="badge badge-{{ job.status }}">{{ job.status }}</span>
+      <a class="job-card" href="/jobs/{{ job.job_id }}">
+        <div class="job-card-header">
+          <span class="job-card-name">{{ job.name }}</span>
+          <span class="badge badge-{{ job.status }}">{{ job.status }}</span>
+        </div>
+        <div class="job-card-path">{{ job.scan_path }}</div>
+        {% if job.total_items > 0 %}
+          <div class="progress-bar">
+            <div class="progress-fill" style="width: {{ (job.reviewed_items / job.total_items * 100) | int }}%"></div>
           </div>
-          <div class="job-card-path">{{ job.scan_path }}</div>
-          {% if job.total_items > 0 %}
-            <div class="progress-bar">
-              <div class="progress-fill" style="width: {{ (job.reviewed_items / job.total_items * 100) | int }}%"></div>
-            </div>
-          {% else %}
-            <div class="progress-bar"><div class="progress-fill" style="width: 0%"></div></div>
-          {% endif %}
-          <div class="job-card-footer">
-            <span>{{ job.reviewed_items }} / {{ job.total_items }} 已审阅</span>
-            <span>{{ job.created_at[:10] }}</span>
-          </div>
-        </a>
-        <button class="job-delete-btn" onclick="event.stopPropagation();deleteJob('{{ job.job_id }}', this)" title="删除任务">&times;</button>
-      </div>
+        {% else %}
+          <div class="progress-bar"><div class="progress-fill" style="width: 0%"></div></div>
+        {% endif %}
+        <div class="job-card-footer">
+          <span>{{ job.reviewed_items }} / {{ job.total_items }} 已审阅</span>
+          <span>{{ job.created_at[:10] }}</span>
+        </div>
+      </a>
     {% endfor %}
   {% else %}
     <div class="empty-state">还没有任务，创建一个开始吧</div>
@@ -324,16 +311,6 @@ function confirmSelection() {
 document.getElementById('modalOverlay').addEventListener('click', function(e) {
   if (e.target === this) closePicker();
 });
-
-async function deleteJob(jobId, btn) {
-  if (!confirm('确定删除此任务？所有条目数据将一并删除。')) return;
-  try {
-    const res = await fetch('/api/v1/jobs/' + jobId, { method: 'DELETE' });
-    if (res.ok) {
-      btn.closest('.job-card').remove();
-    }
-  } catch (e) { /* ignore */ }
-}
 </script>
 </body>
 </html>
