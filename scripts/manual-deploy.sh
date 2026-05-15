@@ -6,11 +6,37 @@ COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.nas.yml}"
 BRANCH="${BRANCH:-main}"
 HEALTH_URL="${HEALTH_URL:-}"
 
+# This repo may be operated from two environments:
+# - NAS host:   /vol2/1000/Docker/hermes/data/... is visible
+# - Hermes container: /opt/data/... is visible
+# The repo-local git config may point at the container path, so the deploy script
+# overrides it with whichever deploy key exists in the current environment.
+DEPLOY_KEY="${DEPLOY_KEY:-}"
+
 log() {
   printf '\n[%s] %s\n' "$(date '+%F %T')" "$*"
 }
 
+configure_git_ssh() {
+  if [ -n "$DEPLOY_KEY" ]; then
+    :
+  elif [ -f /vol2/1000/Docker/hermes/data/home/.ssh/video_review_github_deploy ]; then
+    DEPLOY_KEY="/vol2/1000/Docker/hermes/data/home/.ssh/video_review_github_deploy"
+  elif [ -f /opt/data/home/.ssh/video_review_github_deploy ]; then
+    DEPLOY_KEY="/opt/data/home/.ssh/video_review_github_deploy"
+  fi
+
+  if [ -n "$DEPLOY_KEY" ]; then
+    chmod 600 "$DEPLOY_KEY" 2>/dev/null || true
+    export GIT_SSH_COMMAND="ssh -i $DEPLOY_KEY -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new"
+    log "使用 GitHub deploy key: $DEPLOY_KEY"
+  else
+    log "未找到项目 deploy key，将使用当前用户默认 SSH/Git 凭据"
+  fi
+}
+
 cd "$PROJECT_DIR"
+configure_git_ssh
 
 log "当前目录: $(pwd)"
 log "检查 Git 状态"
