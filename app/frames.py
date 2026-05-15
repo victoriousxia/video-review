@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import random
 import shutil
 import subprocess
 from pathlib import Path
@@ -35,6 +36,7 @@ def generate_frames_with_progress(
     max_width: int = 0,
     skip_percent: int = 5,
     timeout: int = 30,
+    randomize: bool = False,
     on_progress: Callable[[int, int], None] | None = None,
 ) -> list[str]:
     if output_dir.exists():
@@ -49,10 +51,14 @@ def generate_frames_with_progress(
     start_time = duration * skip_fraction
     end_time = duration * (1 - skip_fraction)
     effective_duration = end_time - start_time
+    step = effective_duration / (count + 1)
 
     timestamps = []
     for i in range(count):
-        t = start_time + effective_duration * (i + 1) / (count + 1)
+        t = start_time + step * (i + 1)
+        if randomize:
+            jitter = random.uniform(-step * 0.4, step * 0.4)
+            t = max(start_time, min(end_time, t + jitter))
         timestamps.append(t)
 
     vf_filters: list[str] = []

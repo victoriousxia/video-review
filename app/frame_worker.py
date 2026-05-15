@@ -97,6 +97,7 @@ class FrameWorker:
                 max_width=self._default_max_width,
                 skip_percent=self._default_skip_percent,
                 timeout=self._default_timeout,
+                randomize=force,
                 on_progress=on_progress,
             )
             with self._lock:
