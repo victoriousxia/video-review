@@ -15,12 +15,18 @@ class Settings(BaseSettings):
     library_root: Path = Field(default=Path("/media/library"), alias="VIDEO_REVIEW_LIBRARY_ROOT")
     auth_mode: str = Field(default="proxy", alias="VIDEO_REVIEW_AUTH_MODE")
     app_token: str = Field(default="", alias="VIDEO_REVIEW_APP_TOKEN")
+    frames_count: int = Field(default=9, alias="VIDEO_REVIEW_FRAMES_COUNT")
+    frames_quality: int = Field(default=2, alias="VIDEO_REVIEW_FRAMES_QUALITY")
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     @property
     def database_path(self) -> Path:
         return self.data_dir / "video_review.db"
+
+    @property
+    def frames_dir(self) -> Path:
+        return self.data_dir / "frames"
 
     @property
     def screenshot_dir(self) -> Path:

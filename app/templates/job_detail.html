@@ -67,30 +67,67 @@
     .dir-card-stats { font-size: 12px; color: #71717a; margin-bottom: 8px; }
     .dir-card .progress-bar { height: 4px; }
 
-    .file-list { display: flex; flex-direction: column; gap: 6px; }
-    .file-item {
-      display: flex; align-items: center; gap: 12px;
+    .file-list { display: flex; flex-direction: column; gap: 8px; }
+    .file-card {
       background: #18181b; border: 1px solid #27272a; border-radius: 12px;
-      padding: 12px 16px; transition: border-color 0.2s;
+      overflow: hidden; transition: border-color 0.2s;
     }
-    .file-item:hover { border-color: #3f3f46; }
+    .file-card:hover { border-color: #3f3f46; }
+    .file-card.marked-delete { border-color: #7f1d1d; opacity: 0.6; }
+    .file-card-main {
+      display: flex; align-items: center; gap: 12px; padding: 12px 16px;
+    }
     .file-info { flex: 1; min-width: 0; }
     .file-name { font-size: 14px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .file-meta { font-size: 12px; color: #52525b; margin-top: 2px; }
 
-    .review-actions { display: flex; gap: 4px; flex-shrink: 0; flex-wrap: wrap; }
-    .review-btn {
-      padding: 4px 10px; font-size: 11px; font-weight: 500;
-      border: 1px solid #27272a; border-radius: 6px;
-      background: transparent; color: #71717a; cursor: pointer;
+    .file-actions { display: flex; gap: 6px; flex-shrink: 0; }
+    .action-btn {
+      padding: 6px 12px; font-size: 12px; font-weight: 500;
+      border: 1px solid #27272a; border-radius: 8px;
+      background: transparent; color: #a1a1aa; cursor: pointer;
       transition: all 0.15s; white-space: nowrap;
     }
-    .review-btn:hover { border-color: #3f3f46; color: #a1a1aa; }
-    .review-btn.active-keep { background: #052e16; border-color: #166534; color: #4ade80; }
-    .review-btn.active-move_later { background: #172554; border-color: #1e40af; color: #60a5fa; }
-    .review-btn.active-delete_later { background: #450a0a; border-color: #7f1d1d; color: #f87171; }
-    .review-btn.active-ignore { background: #27272a; border-color: #3f3f46; color: #a1a1aa; }
-    .review-btn.active-unsure { background: #422006; border-color: #92400e; color: #fbbf24; }
+    .action-btn:hover { border-color: #3f3f46; color: #fafafa; }
+    .action-btn.btn-preview { border-color: #1e40af; color: #60a5fa; }
+    .action-btn.btn-preview:hover { background: #172554; }
+    .action-btn.btn-organize { color: #52525b; border-color: #1c1c1f; cursor: not-allowed; }
+    .action-btn.btn-delete { border-color: #7f1d1d; color: #f87171; }
+    .action-btn.btn-delete:hover { background: #450a0a; }
+    .action-btn.btn-delete.active { background: #450a0a; border-color: #991b1b; }
+    .action-btn.btn-regen { border-color: #27272a; color: #71717a; font-size: 11px; }
+    .action-btn.btn-regen:hover { color: #a1a1aa; }
+
+    .frames-panel {
+      display: none; padding: 12px 16px 16px; border-top: 1px solid #27272a;
+    }
+    .frames-panel.open { display: block; }
+    .frames-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+    }
+    .frames-grid img {
+      width: 100%; aspect-ratio: 16/9; object-fit: cover;
+      border-radius: 8px; cursor: pointer; transition: opacity 0.2s;
+      background: #27272a;
+    }
+    .frames-grid img:hover { opacity: 0.8; }
+    .frames-loading {
+      text-align: center; padding: 20px; color: #52525b; font-size: 13px;
+    }
+    .frames-loading .spinner {
+      display: inline-block; width: 16px; height: 16px;
+      border: 2px solid #27272a; border-top-color: #60a5fa;
+      border-radius: 50%; animation: spin 0.6s linear infinite;
+      margin-right: 8px; vertical-align: middle;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .lightbox {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9);
+      z-index: 1000; align-items: center; justify-content: center; cursor: pointer;
+    }
+    .lightbox.open { display: flex; }
+    .lightbox img { max-width: 90vw; max-height: 90vh; border-radius: 8px; }
 
     .empty-state { text-align: center; padding: 40px 20px; color: #52525b; font-size: 14px; }
   </style>
@@ -111,7 +148,7 @@
         <div class="progress-fill" style="width: {{ (job.reviewed_items / job.total_items * 100) | int }}%"></div>
         {% endif %}
       </div>
-      <span class="progress-text">{{ job.reviewed_items }} / {{ job.total_items }} 已审阅</span>
+      <span class="progress-text">{{ job.reviewed_items }} / {{ job.total_items }} 已处理</span>
     </div>
     {% if job.status == 'pending' %}
       <form method="post" action="/jobs/{{ job.job_id }}/scan" style="display:inline">
@@ -148,7 +185,7 @@
       <a class="dir-card {% if sub.total > 0 and sub.reviewed == sub.total %}complete{% elif sub.reviewed > 0 %}in-progress{% endif %}"
          href="/jobs/{{ job.job_id }}?dir={% if current_dir %}{{ current_dir }}/{% endif %}{{ sub.name }}">
         <div class="dir-card-name">{{ sub.name }}</div>
-        <div class="dir-card-stats">{{ sub.reviewed }} / {{ sub.total }} 已审阅</div>
+        <div class="dir-card-stats">{{ sub.reviewed }} / {{ sub.total }} 已处理</div>
         <div class="progress-bar">
           <div class="progress-fill" style="width: {% if sub.total > 0 %}{{ (sub.reviewed / sub.total * 100) | int }}{% else %}0{% endif %}%"></div>
         </div>
@@ -162,17 +199,20 @@
   {% if items %}
   <div class="file-list">
     {% for item in items %}
-    <div class="file-item" data-item-id="{{ item.item_id }}">
-      <div class="file-info">
-        <div class="file-name">{{ item.file_name }}</div>
-        <div class="file-meta">{{ "%.1f"|format(item.file_size / 1048576) }} MB &middot; {{ item.extension }}</div>
+    <div class="file-card {% if item.review_status == 'delete_later' %}marked-delete{% endif %}" data-item-id="{{ item.item_id }}">
+      <div class="file-card-main">
+        <div class="file-info">
+          <div class="file-name">{{ item.file_name }}</div>
+          <div class="file-meta">{{ "%.1f"|format(item.file_size / 1048576) }} MB &middot; {{ item.extension }}{% if item.review_status == 'delete_later' %} &middot; <span style="color:#f87171">待删除</span>{% endif %}</div>
+        </div>
+        <div class="file-actions">
+          <button class="action-btn btn-preview" onclick="togglePreview(this)">预览</button>
+          <button class="action-btn btn-organize" title="开发中" disabled>整理</button>
+          <button class="action-btn btn-delete {% if item.review_status == 'delete_later' %}active{% endif %}" onclick="toggleDelete(this)">删除</button>
+        </div>
       </div>
-      <div class="review-actions">
-        <button class="review-btn {% if item.review_status == 'keep' %}active-keep{% endif %}" data-status="keep" onclick="setStatus(this)">保留</button>
-        <button class="review-btn {% if item.review_status == 'move_later' %}active-move_later{% endif %}" data-status="move_later" onclick="setStatus(this)">待移动</button>
-        <button class="review-btn {% if item.review_status == 'delete_later' %}active-delete_later{% endif %}" data-status="delete_later" onclick="setStatus(this)">待删除</button>
-        <button class="review-btn {% if item.review_status == 'ignore' %}active-ignore{% endif %}" data-status="ignore" onclick="setStatus(this)">忽略</button>
-        <button class="review-btn {% if item.review_status == 'unsure' %}active-unsure{% endif %}" data-status="unsure" onclick="setStatus(this)">不确定</button>
+      <div class="frames-panel">
+        <div class="frames-grid"></div>
       </div>
     </div>
     {% endfor %}
@@ -188,31 +228,132 @@
   {% endif %}
 </main>
 
-<script>
-async function setStatus(btn) {
-  const item = btn.closest('.file-item');
-  const itemId = item.dataset.itemId;
-  const status = btn.dataset.status;
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <img id="lightboxImg" src="" alt="">
+</div>
 
-  const buttons = item.querySelectorAll('.review-btn');
-  buttons.forEach(b => {
-    b.className = 'review-btn';
-  });
-  btn.classList.add('active-' + status);
+<script>
+async function togglePreview(btn) {
+  const card = btn.closest('.file-card');
+  const itemId = card.dataset.itemId;
+  const panel = card.querySelector('.frames-panel');
+  const grid = panel.querySelector('.frames-grid');
+
+  if (panel.classList.contains('open') && grid.children.length > 0) {
+    panel.classList.remove('open');
+    return;
+  }
+
+  panel.classList.add('open');
+
+  const existingRes = await fetch('/api/v1/items/' + itemId + '/frames');
+  const existingData = await existingRes.json();
+
+  if (existingData.frames && existingData.frames.length > 0) {
+    renderFrames(grid, existingData.frames, btn);
+    return;
+  }
+
+  grid.innerHTML = '<div class="frames-loading"><span class="spinner"></span>正在生成预览帧...</div>';
+
+  try {
+    const res = await fetch('/api/v1/items/' + itemId + '/frames', { method: 'POST' });
+    if (!res.ok) {
+      const err = await res.json();
+      grid.innerHTML = '<div class="frames-loading" style="color:#f87171">生成失败: ' + (err.detail || '未知错误') + '</div>';
+      return;
+    }
+    const data = await res.json();
+    renderFrames(grid, data.frames, btn);
+  } catch (e) {
+    grid.innerHTML = '<div class="frames-loading" style="color:#f87171">请求失败</div>';
+  }
+}
+
+function renderFrames(grid, frames, previewBtn) {
+  grid.innerHTML = frames.map(url =>
+    '<img src="' + url + '" onclick="openLightbox(this.src)" loading="lazy">'
+  ).join('');
+
+  const actions = previewBtn.parentElement;
+  if (!actions.querySelector('.btn-regen')) {
+    const regenBtn = document.createElement('button');
+    regenBtn.className = 'action-btn btn-regen';
+    regenBtn.textContent = '重新生成';
+    regenBtn.onclick = function() { regenerateFrames(this); };
+    actions.insertBefore(regenBtn, previewBtn.nextSibling);
+  }
+}
+
+async function regenerateFrames(btn) {
+  const card = btn.closest('.file-card');
+  const itemId = card.dataset.itemId;
+  const panel = card.querySelector('.frames-panel');
+  const grid = panel.querySelector('.frames-grid');
+
+  grid.innerHTML = '<div class="frames-loading"><span class="spinner"></span>重新生成中...</div>';
+
+  try {
+    const res = await fetch('/api/v1/items/' + itemId + '/frames', { method: 'POST' });
+    if (!res.ok) {
+      const err = await res.json();
+      grid.innerHTML = '<div class="frames-loading" style="color:#f87171">生成失败: ' + (err.detail || '未知错误') + '</div>';
+      return;
+    }
+    const data = await res.json();
+    grid.innerHTML = data.frames.map(url =>
+      '<img src="' + url + '?t=' + Date.now() + '" onclick="openLightbox(this.src)" loading="lazy">'
+    ).join('');
+  } catch (e) {
+    grid.innerHTML = '<div class="frames-loading" style="color:#f87171">请求失败</div>';
+  }
+}
+
+async function toggleDelete(btn) {
+  const card = btn.closest('.file-card');
+  const itemId = card.dataset.itemId;
+  const isActive = btn.classList.contains('active');
+  const newStatus = isActive ? 'pending' : 'delete_later';
 
   try {
     const res = await fetch('/api/v1/items/' + itemId, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ review_status: status })
+      body: JSON.stringify({ review_status: newStatus })
     });
-    if (!res.ok) {
-      btn.classList.remove('active-' + status);
+    if (res.ok) {
+      btn.classList.toggle('active');
+      card.classList.toggle('marked-delete');
+      const meta = card.querySelector('.file-meta');
+      if (newStatus === 'delete_later') {
+        if (!meta.innerHTML.includes('待删除')) {
+          meta.innerHTML += ' &middot; <span style="color:#f87171">待删除</span>';
+        }
+      } else {
+        const span = meta.querySelector('span[style*="f87171"]');
+        if (span && span.previousSibling) {
+          span.previousSibling.remove();
+          span.remove();
+        }
+      }
     }
-  } catch (e) {
-    btn.classList.remove('active-' + status);
-  }
+  } catch (e) { /* ignore */ }
 }
+
+function openLightbox(src) {
+  event.stopPropagation();
+  document.getElementById('lightboxImg').src = src;
+  document.getElementById('lightbox').classList.add('open');
+}
+
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('open');
+}
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeLightbox();
+});
 </script>
 </body>
 </html>

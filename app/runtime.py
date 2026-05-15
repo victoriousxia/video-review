@@ -13,6 +13,7 @@ def ensure_data_dirs(settings: Settings) -> None:
     settings.screenshot_dir.mkdir(parents=True, exist_ok=True)
     settings.jobs_dir.mkdir(parents=True, exist_ok=True)
     settings.logs_dir.mkdir(parents=True, exist_ok=True)
+    settings.frames_dir.mkdir(parents=True, exist_ok=True)
 
 
 def path_exists(path: Path) -> bool:
