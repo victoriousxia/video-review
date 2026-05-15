@@ -13,6 +13,7 @@ logs/
 *.db
 *.sqlite
 .env
+_deploy_backups/
 
 # OS/editor
 .DS_Store
