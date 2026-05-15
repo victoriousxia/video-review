@@ -174,6 +174,33 @@ def patch_item(item_id: str, body: PatchItemRequest) -> dict:
     return updated
 
 
+@app.get("/api/v1/browse")
+def browse_directories(path: str | None = None) -> dict:
+    allowed_roots = (settings.download_root, settings.library_root)
+    if path is None or path == "":
+        roots = []
+        for root in allowed_roots:
+            if path_exists(root):
+                roots.append({"name": root.name, "path": str(root)})
+        return {"current": None, "dirs": roots}
+
+    target = Path(path)
+    if not target.is_absolute():
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="path must be absolute")
+    if ".." in target.parts:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="path must not contain '..'")
+    if not any(path_is_under(target, root) for root in allowed_roots):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="path not under allowed roots")
+    if not target.is_dir():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="directory not found")
+
+    dirs = sorted(
+        [{"name": d.name, "path": str(d)} for d in target.iterdir() if d.is_dir() and not d.name.startswith(".")],
+        key=lambda x: x["name"],
+    )
+    return {"current": str(target), "dirs": dirs}
+
+
 @app.get("/", response_class=HTMLResponse)
 def index(request: Request):
     jobs = get_database().list_jobs()
@@ -182,9 +209,9 @@ def index(request: Request):
         "index.html",
         {
             "version": load_version(),
-            "app_settings": settings,
-            "service_info": service_info(),
-            "jobs": jobs[:5],
+            "jobs": jobs,
+            "download_root": str(settings.download_root),
+            "library_root": str(settings.library_root),
         },
     )
 

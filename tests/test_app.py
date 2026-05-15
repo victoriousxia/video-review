@@ -35,15 +35,14 @@ def test_info_exposes_integration_mode_and_paths():
     assert body["safety"]["deletes_files"] is False
 
 
-def test_index_page_renders_current_safety_state():
+def test_index_page_renders():
     client = TestClient(app)
 
     response = client.get("/")
 
     assert response.status_code == 200
     assert "video-review" in response.text
-    assert "当前版本支持创建 Review 任务" in response.text
-    assert "不会移动或删除任何视频" in response.text
+    assert "新建任务" in response.text
 
 
 def test_jobs_page_renders_empty_state():

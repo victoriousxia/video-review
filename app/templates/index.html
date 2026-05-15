@@ -5,91 +5,311 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>video-review</title>
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 0; background: #0f172a; color: #e5e7eb; }
-    main { max-width: 1040px; margin: 0 auto; padding: 32px 18px; }
-    a { color: #93c5fd; }
-    .card { background: #111827; border: 1px solid #374151; border-radius: 16px; padding: 20px; margin: 16px 0; }
-    code { background: #020617; padding: 2px 6px; border-radius: 6px; }
-    .muted { color: #9ca3af; }
-    .badge { display: inline-block; background: #1d4ed8; color: white; border-radius: 999px; padding: 4px 10px; font-size: 13px; }
-    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
-    .button { display: inline-block; background: #2563eb; color: white; text-decoration: none; border-radius: 10px; padding: 10px 14px; border: none; cursor: pointer; font-size: 14px; }
-    .form label { display: block; margin: 12px 0 4px; }
-    .form input[type="text"] { width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid #374151; background: #020617; color: #e5e7eb; box-sizing: border-box; }
-    .form input[type="checkbox"] { margin-right: 6px; }
-    .form button { margin-top: 14px; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif; background: #09090b; color: #fafafa; min-height: 100vh; }
+    main { max-width: 720px; margin: 0 auto; padding: 60px 20px 80px; }
+
+    .header { display: flex; align-items: baseline; gap: 10px; margin-bottom: 48px; }
+    .header h1 { font-size: 20px; font-weight: 600; letter-spacing: -0.02em; }
+    .header .ver { font-size: 12px; color: #52525b; font-weight: 400; }
+
+    .section-title { font-size: 13px; font-weight: 500; color: #71717a; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 16px; }
+
+    .card {
+      background: #18181b;
+      border: 1px solid #27272a;
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 32px;
+      transition: border-color 0.2s;
+    }
+    .card:hover { border-color: #3f3f46; }
+
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; font-size: 13px; color: #a1a1aa; margin-bottom: 6px; }
+    .form-input {
+      width: 100%; padding: 10px 14px; font-size: 14px;
+      background: #09090b; border: 1px solid #27272a; border-radius: 10px;
+      color: #fafafa; outline: none; transition: border-color 0.2s;
+    }
+    .form-input:focus { border-color: #3b82f6; }
+    .form-input::placeholder { color: #52525b; }
+
+    .dir-picker-btn {
+      width: 100%; padding: 10px 14px; font-size: 14px; text-align: left;
+      background: #09090b; border: 1px solid #27272a; border-radius: 10px;
+      color: #52525b; cursor: pointer; transition: border-color 0.2s;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .dir-picker-btn:hover { border-color: #3f3f46; }
+    .dir-picker-btn.has-value { color: #fafafa; }
+    .dir-picker-btn svg { flex-shrink: 0; }
+
+    .form-row { display: flex; align-items: center; gap: 12px; margin-top: 20px; }
+    .checkbox-label { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #a1a1aa; cursor: pointer; }
+    .checkbox-label input { accent-color: #3b82f6; }
+
+    .btn-primary {
+      padding: 10px 20px; font-size: 14px; font-weight: 500;
+      background: #fafafa; color: #09090b; border: none; border-radius: 10px;
+      cursor: pointer; transition: opacity 0.2s;
+    }
+    .btn-primary:hover { opacity: 0.85; }
+
+    .job-card {
+      display: block; text-decoration: none; color: inherit;
+      background: #18181b; border: 1px solid #27272a; border-radius: 14px;
+      padding: 18px 20px; margin-bottom: 10px;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .job-card:hover { border-color: #3f3f46; background: #1c1c1f; }
+    .job-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+    .job-card-name { font-size: 15px; font-weight: 500; }
+    .job-card-path { font-size: 12px; color: #52525b; margin-bottom: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    .badge {
+      display: inline-block; font-size: 11px; font-weight: 500; padding: 3px 8px;
+      border-radius: 6px; text-transform: uppercase; letter-spacing: 0.03em;
+    }
+    .badge-pending { background: #27272a; color: #a1a1aa; }
+    .badge-running { background: #172554; color: #60a5fa; }
+    .badge-ready { background: #052e16; color: #4ade80; }
+    .badge-failed { background: #450a0a; color: #f87171; }
+
+    .progress-bar { height: 4px; background: #27272a; border-radius: 2px; overflow: hidden; }
+    .progress-fill { height: 100%; background: #3b82f6; border-radius: 2px; transition: width 0.3s; }
+
+    .job-card-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; font-size: 12px; color: #52525b; }
+
+    .empty-state { text-align: center; padding: 40px 20px; color: #52525b; font-size: 14px; }
+
+    /* Directory picker modal */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+      z-index: 1000; align-items: center; justify-content: center;
+      backdrop-filter: blur(4px);
+    }
+    .modal-overlay.active { display: flex; }
+    .modal {
+      background: #18181b; border: 1px solid #27272a; border-radius: 20px;
+      width: 90%; max-width: 480px; max-height: 70vh; display: flex; flex-direction: column;
+      box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+    }
+    .modal-header {
+      padding: 18px 22px; border-bottom: 1px solid #27272a;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .modal-header h3 { font-size: 15px; font-weight: 600; }
+    .modal-close { background: none; border: none; color: #71717a; cursor: pointer; font-size: 18px; padding: 4px; }
+    .modal-close:hover { color: #fafafa; }
+
+    .breadcrumb { padding: 12px 22px; font-size: 12px; color: #71717a; border-bottom: 1px solid #27272a; display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+    .breadcrumb span { cursor: pointer; color: #a1a1aa; }
+    .breadcrumb span:hover { color: #fafafa; }
+    .breadcrumb .sep { color: #3f3f46; cursor: default; }
+
+    .dir-list { flex: 1; overflow-y: auto; padding: 8px 12px; }
+    .dir-item {
+      display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+      border-radius: 10px; cursor: pointer; font-size: 14px; transition: background 0.15s;
+    }
+    .dir-item:hover { background: #27272a; }
+    .dir-item svg { color: #71717a; flex-shrink: 0; }
+
+    .modal-footer { padding: 14px 22px; border-top: 1px solid #27272a; display: flex; justify-content: flex-end; gap: 10px; }
+    .btn-ghost { padding: 8px 16px; font-size: 13px; background: none; border: 1px solid #27272a; border-radius: 8px; color: #a1a1aa; cursor: pointer; }
+    .btn-ghost:hover { border-color: #3f3f46; color: #fafafa; }
+    .btn-confirm { padding: 8px 16px; font-size: 13px; background: #fafafa; color: #09090b; border: none; border-radius: 8px; cursor: pointer; font-weight: 500; }
+    .btn-confirm:hover { opacity: 0.85; }
   </style>
 </head>
 <body>
 <main>
-  <div class="badge">{{ version }}</div>
-  <h1>video-review</h1>
-  <p class="muted">NAS 视频整理 Review 服务。当前版本支持创建 Review 任务、扫描目录下的视频文件并生成条目，不会移动或删除任何视频。</p>
+  <div class="header">
+    <h1>video-review</h1>
+    <span class="ver">{{ version }}</span>
+  </div>
 
-  <p><a class="button" href="/jobs">查看 Review 任务</a></p>
-
+  <!-- Create task -->
+  <p class="section-title">新建任务</p>
   <div class="card">
-    <h2>创建 Review 任务</h2>
-    <form method="post" action="/jobs" class="form">
-      <label>任务名称<br><input type="text" name="name" required placeholder="例如：下载目录整理"></label>
-      <label>扫描路径<br><input type="text" name="scan_path" required placeholder="{{ app_settings.download_root }}"></label>
-      <label>备注<br><input type="text" name="notes" placeholder="可选"></label>
-      <label><input type="checkbox" name="scan_now" value="true" checked> 创建后立即扫描</label>
-      <button type="submit" class="button">创建任务</button>
+    <form method="post" action="/jobs" id="createForm">
+      <div class="form-group">
+        <label>任务名称</label>
+        <input class="form-input" type="text" name="name" required placeholder="例如：下载目录整理">
+      </div>
+      <div class="form-group">
+        <label>扫描目录</label>
+        <input type="hidden" name="scan_path" id="scanPathInput">
+        <button type="button" class="dir-picker-btn" id="dirPickerBtn" onclick="openPicker()">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 4.5h4.5l1.5 1.5H14v7H2z"/><path d="M2 4.5V3h4.5l1.5 1.5"/></svg>
+          <span id="dirPickerText">点击选择目录</span>
+        </button>
+      </div>
+      <div class="form-group">
+        <label>备注</label>
+        <input class="form-input" type="text" name="notes" placeholder="可选">
+      </div>
+      <div class="form-row">
+        <label class="checkbox-label"><input type="checkbox" name="scan_now" value="true" checked> 创建后立即扫描</label>
+        <div style="flex:1"></div>
+        <button type="submit" class="btn-primary">创建</button>
+      </div>
     </form>
   </div>
 
-  <div class="card">
-    <h2>架构原则</h2>
-    <p>这是一个通用 Docker 服务，Hermes 只作为可选编排器负责触发扫描、发送通知、确认执行。</p>
-  </div>
+  <!-- Task list -->
+  <p class="section-title">任务列表</p>
+  {% if jobs %}
+    {% for job in jobs %}
+      <a class="job-card" href="/jobs/{{ job.job_id }}">
+        <div class="job-card-header">
+          <span class="job-card-name">{{ job.name }}</span>
+          <span class="badge badge-{{ job.status }}">{{ job.status }}</span>
+        </div>
+        <div class="job-card-path">{{ job.scan_path }}</div>
+        {% if job.total_items > 0 %}
+          <div class="progress-bar">
+            <div class="progress-fill" style="width: {{ (job.reviewed_items / job.total_items * 100) | int }}%"></div>
+          </div>
+        {% else %}
+          <div class="progress-bar"><div class="progress-fill" style="width: 0%"></div></div>
+        {% endif %}
+        <div class="job-card-footer">
+          <span>{{ job.reviewed_items }} / {{ job.total_items }} 已审阅</span>
+          <span>{{ job.created_at[:10] }}</span>
+        </div>
+      </a>
+    {% endfor %}
+  {% else %}
+    <div class="empty-state">还没有任务，创建一个开始吧</div>
+  {% endif %}
+</main>
 
-  <div class="card">
-    <h2>配置</h2>
-    <div class="grid">
-      <p>下载目录：<br><code>{{ app_settings.download_root }}</code></p>
-      <p>媒体库目录：<br><code>{{ app_settings.library_root }}</code></p>
-      <p>数据目录：<br><code>{{ app_settings.data_dir }}</code></p>
-      <p>认证模式：<br><code>{{ app_settings.auth_mode }}</code></p>
-      <p>公开地址：<br><code>{{ app_settings.public_base_url or '未配置' }}</code></p>
-      <p>数据库：<br><code>{{ service_info.database_path }}</code></p>
+<!-- Directory picker modal -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>选择目录</h3>
+      <button class="modal-close" onclick="closePicker()">&times;</button>
+    </div>
+    <div class="breadcrumb" id="breadcrumb"></div>
+    <div class="dir-list" id="dirList"></div>
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="closePicker()">取消</button>
+      <button class="btn-confirm" id="confirmBtn" onclick="confirmSelection()">选择当前目录</button>
     </div>
   </div>
+</div>
 
-  <div class="card">
-    <h2>当前能力</h2>
-    <p>Review 网页：<code>{{ service_info.capabilities.review_web }}</code></p>
-    <p>扫描任务：<code>{{ service_info.capabilities.scan_jobs }}</code></p>
-    <p>截图批次：<code>{{ service_info.capabilities.screenshot_batches }}</code></p>
-    <p>执行计划：<code>{{ service_info.capabilities.execution_plans }}</code></p>
-    <p>媒体文件改动：<code>{{ service_info.capabilities.media_mutation }}</code></p>
-  </div>
+<script>
+const ROOTS = [
+  { name: "下载目录", path: "{{ download_root }}" },
+  { name: "媒体库目录", path: "{{ library_root }}" }
+];
 
-  <div class="card">
-    <h2>最近任务</h2>
-    {% if jobs %}
-      {% for job in jobs %}
-        <p><a href="/jobs/{{ job.job_id }}">{{ job.name }}</a><br><span class="muted">{{ job.scan_path }} · {{ job.status }} · {{ job.created_at }}</span></p>
-      {% endfor %}
-    {% else %}
-      <p class="muted">还没有 Review 任务。可以通过 API 创建一个测试任务来验证流程。</p>
-    {% endif %}
-  </div>
+let currentPath = null;
+let pathStack = [];
 
-  <div class="card">
-    <h2>安全状态</h2>
-    <p>当前版本只创建任务和保存元数据，不会移动或删除任何视频。</p>
-    <p>Review only：<code>{{ service_info.safety.review_only }}</code></p>
-    <p>移动文件：<code>{{ service_info.safety.moves_files }}</code></p>
-    <p>删除文件：<code>{{ service_info.safety.deletes_files }}</code></p>
-  </div>
+function openPicker() {
+  document.getElementById('modalOverlay').classList.add('active');
+  currentPath = null;
+  pathStack = [];
+  showRoots();
+}
 
-  <div class="card">
-    <h2>接口</h2>
-    <p><a href="/healthz">/healthz</a></p>
-    <p><a href="/api/v1/info">/api/v1/info</a></p>
-    <p><a href="/api/v1/jobs">/api/v1/jobs</a></p>
-  </div>
-</main>
+function closePicker() {
+  document.getElementById('modalOverlay').classList.remove('active');
+}
+
+function showRoots() {
+  currentPath = null;
+  pathStack = [];
+  renderBreadcrumb();
+  const list = document.getElementById('dirList');
+  list.innerHTML = ROOTS.map(r => `
+    <div class="dir-item" onclick="navigateTo('${r.path}')">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 4.5h4.5l1.5 1.5H14v7H2z"/><path d="M2 4.5V3h4.5l1.5 1.5"/></svg>
+      <span>${r.name}</span>
+      <span style="color:#52525b;font-size:12px;margin-left:auto">${r.path}</span>
+    </div>
+  `).join('');
+}
+
+async function navigateTo(path) {
+  try {
+    const res = await fetch('/api/v1/browse?path=' + encodeURIComponent(path));
+    if (!res.ok) return;
+    const data = await res.json();
+    currentPath = path;
+    pathStack = buildStack(path);
+    renderBreadcrumb();
+    renderDirs(data.dirs);
+  } catch (e) { /* ignore */ }
+}
+
+function buildStack(path) {
+  for (const r of ROOTS) {
+    if (path === r.path || path.startsWith(r.path + '/')) {
+      const parts = [{ name: r.name, path: r.path }];
+      if (path !== r.path) {
+        const rel = path.slice(r.path.length + 1);
+        let acc = r.path;
+        for (const seg of rel.split('/')) {
+          acc += '/' + seg;
+          parts.push({ name: seg, path: acc });
+        }
+      }
+      return parts;
+    }
+  }
+  return [{ name: path.split('/').pop(), path }];
+}
+
+function renderBreadcrumb() {
+  const el = document.getElementById('breadcrumb');
+  if (!currentPath) {
+    el.innerHTML = '<span style="cursor:default;color:#71717a">根目录</span>';
+    return;
+  }
+  let html = '<span onclick="showRoots()">根目录</span>';
+  for (let i = 0; i < pathStack.length; i++) {
+    html += '<span class="sep">/</span>';
+    if (i === pathStack.length - 1) {
+      html += `<span style="color:#fafafa;cursor:default">${pathStack[i].name}</span>`;
+    } else {
+      html += `<span onclick="navigateTo('${pathStack[i].path}')">${pathStack[i].name}</span>`;
+    }
+  }
+  el.innerHTML = html;
+}
+
+function renderDirs(dirs) {
+  const list = document.getElementById('dirList');
+  if (dirs.length === 0) {
+    list.innerHTML = '<div style="padding:20px;text-align:center;color:#52525b;font-size:13px">没有子目录</div>';
+    return;
+  }
+  list.innerHTML = dirs.map(d => `
+    <div class="dir-item" onclick="navigateTo('${d.path}')">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 4.5h4.5l1.5 1.5H14v7H2z"/><path d="M2 4.5V3h4.5l1.5 1.5"/></svg>
+      <span>${d.name}</span>
+    </div>
+  `).join('');
+}
+
+function confirmSelection() {
+  if (!currentPath) return;
+  document.getElementById('scanPathInput').value = currentPath;
+  const btn = document.getElementById('dirPickerBtn');
+  btn.classList.add('has-value');
+  document.getElementById('dirPickerText').textContent = currentPath;
+  closePicker();
+}
+
+document.getElementById('modalOverlay').addEventListener('click', function(e) {
+  if (e.target === this) closePicker();
+});
+</script>
 </body>
 </html>
