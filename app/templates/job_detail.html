@@ -97,8 +97,52 @@
     .action-btn.btn-delete { border-color: #7f1d1d; color: #f87171; }
     .action-btn.btn-delete:hover { background: #450a0a; }
     .action-btn.btn-delete.active { background: #450a0a; border-color: #991b1b; }
+    .action-btn.btn-play { border-color: #166534; color: #4ade80; }
+    .action-btn.btn-play:hover { background: #052e16; }
+    .action-btn.btn-play.active { background: #052e16; border-color: #16a34a; }
     .action-btn.btn-regen { border-color: #27272a; color: #71717a; font-size: 11px; }
     .action-btn.btn-regen:hover { color: #a1a1aa; }
+
+    .video-panel {
+      display: none; padding: 12px 16px 16px; border-top: 1px solid #27272a;
+    }
+    .video-panel.open { display: block; }
+    .video-player-wrap {
+      position: relative; width: 100%; border-radius: 8px; overflow: hidden;
+      background: #000;
+    }
+    .video-player-wrap video {
+      width: 100%; display: block; max-height: 400px;
+    }
+    .video-controls {
+      display: flex; align-items: center; gap: 10px; padding: 10px 0 4px;
+    }
+    .video-play-btn {
+      width: 32px; height: 32px; border-radius: 50%; border: none;
+      background: #27272a; color: #fafafa; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s; flex-shrink: 0;
+    }
+    .video-play-btn:hover { background: #3f3f46; }
+    .video-progress {
+      flex: 1; height: 6px; background: #27272a; border-radius: 3px;
+      cursor: pointer; position: relative; overflow: hidden;
+    }
+    .video-progress-fill {
+      height: 100%; background: #4ade80; border-radius: 3px;
+      pointer-events: none; transition: width 0.1s linear;
+    }
+    .video-time {
+      font-size: 12px; color: #71717a; white-space: nowrap; min-width: 80px; text-align: right;
+    }
+    .video-mute-btn {
+      width: 28px; height: 28px; border-radius: 6px; border: none;
+      background: transparent; color: #71717a; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: color 0.15s;
+    }
+    .video-mute-btn:hover { color: #fafafa; }
+    .video-mute-btn.unmuted { color: #4ade80; }
 
     .frames-panel {
       display: none; padding: 12px 16px 16px; border-top: 1px solid #27272a;
@@ -230,8 +274,26 @@
           <div class="file-meta">{{ "%.1f"|format(item.file_size / 1048576) }} MB &middot; {{ item.extension }}{% if item.review_status == 'delete_later' %} &middot; <span style="color:#f87171">待删除</span>{% endif %}</div>
         </div>
         <div class="file-actions">
+          <button class="action-btn btn-play" onclick="event.stopPropagation();toggleVideo(this)" title="播放">&#9654;</button>
           <button class="action-btn btn-organize" title="开发中" disabled onclick="event.stopPropagation()">整理</button>
           <button class="action-btn btn-delete {% if item.review_status == 'delete_later' %}active{% endif %}" onclick="event.stopPropagation();toggleDelete(this)">删除</button>
+        </div>
+      </div>
+      <div class="video-panel">
+        <div class="video-player-wrap">
+          <video preload="none" muted></video>
+        </div>
+        <div class="video-controls">
+          <button class="video-play-btn" onclick="videoPlayPause(this)">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><polygon points="3,1 12,7 3,13"/></svg>
+          </button>
+          <div class="video-progress" onmousedown="videoSeekStart(event, this)">
+            <div class="video-progress-fill" style="width:0%"></div>
+          </div>
+          <span class="video-time">0:00 / 0:00</span>
+          <button class="video-mute-btn" onclick="videoToggleMute(this)" title="切换静音">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>
+          </button>
         </div>
       </div>
       <div class="frames-panel">
@@ -426,6 +488,98 @@ document.addEventListener('keydown', function(e) {
   else if (e.key === 'ArrowLeft') { _lightboxIndex = (_lightboxIndex - 1 + _lightboxFrames.length) % _lightboxFrames.length; showLightboxFrame(); }
   else if (e.key === 'ArrowRight') { _lightboxIndex = (_lightboxIndex + 1) % _lightboxFrames.length; showLightboxFrame(); }
 });
+
+function toggleVideo(btn) {
+  const card = btn.closest('.file-card');
+  const itemId = card.dataset.itemId;
+  const panel = card.querySelector('.video-panel');
+  const video = panel.querySelector('video');
+
+  if (panel.classList.contains('open')) {
+    panel.classList.remove('open');
+    btn.classList.remove('active');
+    video.pause();
+    return;
+  }
+
+  panel.classList.add('open');
+  btn.classList.add('active');
+
+  if (!video.src) {
+    video.src = '/api/v1/items/' + itemId + '/video';
+    video.addEventListener('timeupdate', function() {
+      const fill = panel.querySelector('.video-progress-fill');
+      const timeEl = panel.querySelector('.video-time');
+      if (video.duration) {
+        fill.style.width = (video.currentTime / video.duration * 100) + '%';
+        timeEl.textContent = fmtTime(video.currentTime) + ' / ' + fmtTime(video.duration);
+      }
+    });
+    video.addEventListener('ended', function() {
+      const playBtn = panel.querySelector('.video-play-btn');
+      playBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><polygon points="3,1 12,7 3,13"/></svg>';
+    });
+  }
+  video.play();
+  const playBtn = panel.querySelector('.video-play-btn');
+  playBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><rect x="2" y="1" width="3.5" height="12"/><rect x="8.5" y="1" width="3.5" height="12"/></svg>';
+}
+
+function videoPlayPause(btn) {
+  const panel = btn.closest('.video-panel');
+  const video = panel.querySelector('video');
+  if (video.paused) {
+    video.play();
+    btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><rect x="2" y="1" width="3.5" height="12"/><rect x="8.5" y="1" width="3.5" height="12"/></svg>';
+  } else {
+    video.pause();
+    btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><polygon points="3,1 12,7 3,13"/></svg>';
+  }
+}
+
+function videoSeekStart(e, bar) {
+  const panel = bar.closest('.video-panel');
+  const video = panel.querySelector('video');
+  const fill = bar.querySelector('.video-progress-fill');
+
+  function seek(evt) {
+    const rect = bar.getBoundingClientRect();
+    const ratio = Math.max(0, Math.min(1, (evt.clientX - rect.left) / rect.width));
+    if (video.duration) {
+      video.currentTime = ratio * video.duration;
+      fill.style.width = (ratio * 100) + '%';
+    }
+  }
+
+  seek(e);
+
+  function onMove(evt) { seek(evt); }
+  function onUp() {
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onUp);
+  }
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup', onUp);
+}
+
+function videoToggleMute(btn) {
+  const panel = btn.closest('.video-panel');
+  const video = panel.querySelector('video');
+  video.muted = !video.muted;
+  if (video.muted) {
+    btn.classList.remove('unmuted');
+    btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>';
+  } else {
+    btn.classList.add('unmuted');
+    btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.08"/></svg>';
+  }
+}
+
+function fmtTime(s) {
+  const m = Math.floor(s / 60);
+  const sec = Math.floor(s % 60);
+  return m + ':' + (sec < 10 ? '0' : '') + sec;
+}
 
 async function confirmDeleteFiles() {
   if (!confirm('确定要删除当前目录下所有标记为"待删除"的文件吗？此操作不可恢复。')) return;

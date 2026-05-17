@@ -3,7 +3,7 @@ from dataclasses import asdict
 from pathlib import Path
 
 from fastapi import FastAPI, Form, HTTPException, Request, status
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -219,6 +219,31 @@ def get_item_frames(item_id: str) -> dict:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="item not found")
 
     return frame_worker.get_status(item_id)
+
+
+@app.get("/api/v1/items/{item_id}/video")
+def stream_video(item_id: str):
+    database = get_database()
+    item = database.get_item(item_id)
+    if item is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="item not found")
+
+    video_path = Path(item["original_path"])
+    if not video_path.exists():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="video file not found on disk")
+
+    ext = video_path.suffix.lower()
+    media_types = {
+        ".mp4": "video/mp4",
+        ".mkv": "video/x-matroska",
+        ".webm": "video/webm",
+        ".avi": "video/x-msvideo",
+        ".mov": "video/quicktime",
+        ".ts": "video/mp2t",
+        ".flv": "video/x-flv",
+    }
+    media_type = media_types.get(ext, "video/mp4")
+    return FileResponse(video_path, media_type=media_type)
 
 
 @app.get("/api/v1/browse")
