@@ -36,6 +36,7 @@ except OSError:
     _frames_dir = Path(tempfile.mkdtemp())
 
 app.mount("/frames", StaticFiles(directory=str(_frames_dir)), name="frames")
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 frame_worker = FrameWorker(
     frames_dir=_frames_dir,
