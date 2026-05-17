@@ -44,7 +44,7 @@ def make_operation(root: Path, op_id: str = "op_test_001", rel: str = "Show/E01.
 
 def write_pending(base: Path, operation: dict) -> Path:
     pending = base / "pending"
-    pending.mkdir(parents=True)
+    pending.mkdir(parents=True, exist_ok=True)
     path = pending / f"{operation['operation_id']}.json"
     path.write_text(json.dumps(operation, ensure_ascii=False), encoding="utf-8")
     return path
@@ -124,6 +124,48 @@ def test_execute_moves_to_app_trash_and_marks_completed(tmp_path):
     assert trash_path.read_text(encoding="utf-8") == "abc"
     assert ".video-review-trash" in trash_path.parts
     assert (operations / "completed" / "op_test_001.json").exists()
+    assert not (operations / "pending" / "op_test_001.json").exists()
+
+
+def test_delete_permanently_requires_stronger_confirmation_and_marks_completed(tmp_path):
+    root = tmp_path / "download"
+    source = root / "Show" / "E01.mkv"
+    source.parent.mkdir(parents=True)
+    source.write_text("abc", encoding="utf-8")
+    operations = tmp_path / "operations"
+    write_pending(operations, make_operation(root))
+
+    executor = OperationExecutor(operations)
+    with pytest.raises(ExecutorError, match="permanent deletion confirmation"):
+        executor.delete_permanently("op_test_001", confirm="op_test_001")
+
+    result = executor.delete_permanently("op_test_001", confirm="DELETE_PERMANENTLY op_test_001")
+
+    assert result["status"] == "completed"
+    assert result["action"] == "delete_permanently"
+    assert not source.exists()
+    completed = operations / "completed" / "op_test_001.json"
+    assert completed.exists()
+    data = json.loads(completed.read_text(encoding="utf-8"))
+    assert data["execution"]["action"] == "delete_permanently"
+    assert data["execution"]["items"][0]["status"] == "deleted_permanently"
+    assert not (operations / "pending" / "op_test_001.json").exists()
+
+
+def test_reject_moves_pending_to_rejected(tmp_path):
+    root = tmp_path / "download"
+    source = root / "Show" / "E01.mkv"
+    source.parent.mkdir(parents=True)
+    source.write_text("abc", encoding="utf-8")
+    operations = tmp_path / "operations"
+    write_pending(operations, make_operation(root))
+
+    executor = OperationExecutor(operations)
+    result = executor.reject("op_test_001", reason="cancel delete")
+
+    assert result["status"] == "rejected"
+    assert source.exists()
+    assert (operations / "rejected" / "op_test_001.json").exists()
     assert not (operations / "pending" / "op_test_001.json").exists()
 
 

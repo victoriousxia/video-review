@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 CONFIRM_PREFIX = "MOVE_TO_TRASH"
+PERMANENT_CONFIRM_PREFIX = "DELETE_PERMANENTLY"
 OPERATION_ID_RE = re.compile(r"^[A-Za-z0-9_.-]+$")
 ALLOWED_SOURCE_ROOTS = {"download", "library"}
 
@@ -264,6 +265,77 @@ class OperationExecutor:
             processing_path.unlink(missing_ok=True)
             raise ExecutorError(message) from exc
 
+    def delete_permanently(self, operation_id: str, confirm: str) -> dict[str, Any]:
+        operation_id = validate_operation_id(operation_id)
+        if confirm != f"{PERMANENT_CONFIRM_PREFIX} {operation_id}":
+            raise ExecutorError("permanent deletion confirmation does not match")
+
+        source_path = self.pending_path(operation_id)
+        if not source_path.exists():
+            raise ExecutorError(f"pending operation not found: {operation_id}")
+        processing_path = self.processing_dir / source_path.name
+        os.replace(source_path, processing_path)
+        op = load_json(processing_path)
+        executed_items: list[dict[str, Any]] = []
+        try:
+            if op.get("operation_id") != operation_id:
+                raise ExecutorError("operation_id mismatch between file name and JSON")
+            validate_operation(op)
+            plan_items = []
+            for item in op["items"]:
+                source = resolve_item_source(op, item)
+                plan_items.append((item, source))
+
+            for item, source in plan_items:
+                source.unlink()
+                executed_items.append(
+                    {
+                        "item_id": item.get("item_id"),
+                        "file_name": item.get("file_name"),
+                        "source_path": str(source),
+                        "size_bytes": item.get("size_bytes", 0),
+                        "status": "deleted_permanently",
+                    }
+                )
+
+            op["status"] = "completed"
+            op["executed_at"] = utc_now()
+            op["execution"] = {
+                "executor": "hermes",
+                "action": "delete_permanently",
+                "items": executed_items,
+                "errors": [],
+            }
+            target = self.completed_dir / processing_path.name
+            atomic_write_json(target, op)
+            audit = self.audit_dir / f"{operation_id}.json"
+            atomic_write_json(audit, op)
+            processing_path.unlink(missing_ok=True)
+            return {
+                "status": "completed",
+                "operation_id": operation_id,
+                "action": "delete_permanently",
+                "items": executed_items,
+                "operation_file": str(target),
+            }
+        except Exception as exc:
+            message = str(exc)
+            if not isinstance(exc, ExecutorError):
+                message = f"{type(exc).__name__}: {message}"
+            op["status"] = "failed"
+            op["failed_at"] = utc_now()
+            op["execution"] = {
+                "executor": "hermes",
+                "action": "delete_permanently",
+                "items": executed_items,
+                "errors": [message],
+            }
+            failed = self.failed_dir / processing_path.name
+            atomic_write_json(failed, op)
+            processing_path.unlink(missing_ok=True)
+            raise ExecutorError(message) from exc
+
+
 
 def format_plan(plan: dict[str, Any]) -> str:
     lines = [
@@ -296,6 +368,9 @@ def main() -> int:
     exec_p = sub.add_parser("execute")
     exec_p.add_argument("operation_id")
     exec_p.add_argument("--confirm", required=True)
+    delete_p = sub.add_parser("delete-permanently")
+    delete_p.add_argument("operation_id")
+    delete_p.add_argument("--confirm", required=True)
     reject_p = sub.add_parser("reject")
     reject_p.add_argument("operation_id")
     reject_p.add_argument("--reason", default="rejected by user")
@@ -308,6 +383,8 @@ def main() -> int:
         print(format_plan(executor.build_plan(args.operation_id)))
     elif args.command == "execute":
         print(json.dumps(executor.execute(args.operation_id, args.confirm), indent=2, ensure_ascii=False))
+    elif args.command == "delete-permanently":
+        print(json.dumps(executor.delete_permanently(args.operation_id, args.confirm), indent=2, ensure_ascii=False))
     elif args.command == "reject":
         print(json.dumps(executor.reject(args.operation_id, args.reason), indent=2, ensure_ascii=False))
     return 0
