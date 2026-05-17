@@ -11,6 +11,7 @@ from .config import get_settings, load_version
 from .database import get_database, path_is_under
 from .frame_worker import FrameWorker
 from .frames import list_frames
+from .operations import build_operation_request, write_operation_request
 from .runtime import ensure_data_dirs, path_exists
 from .scanner import scan_directory
 from .schemas import CreateJobRequest, JobDetailResponse, JobListResponse, PatchItemRequest, ReviewItem, ReviewJob
@@ -72,11 +73,18 @@ def service_info() -> dict:
             "screenshot_batches": False,
             "execution_plans": False,
             "media_mutation": False,
+            "file_operation_requests": True,
+            "hermes_approval_required": True,
+            "trash_plan": True,
+            "trash_execute": False,
         },
         "safety": {
             "review_only": True,
             "moves_files": False,
             "deletes_files": False,
+            "creates_operation_requests": True,
+            "executor": "hermes",
+            "approval_required": True,
         },
     }
 
@@ -355,23 +363,36 @@ def delete_marked_files(job_id: str, dir: str | None = None) -> dict:
 
     items = database.list_items_by_status(job_id, "delete_later", folder_prefix=folder_prefix)
 
-    deleted = []
-    failed = []
-    for item in items:
-        file_path = Path(item["original_path"])
-        try:
-            if file_path.exists():
-                file_path.unlink()
-                deleted.append(item["item_id"])
-            else:
-                deleted.append(item["item_id"])
-        except OSError as e:
-            failed.append({"item_id": item["item_id"], "error": str(e)})
+    if not items:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="no items marked for deletion",
+        )
 
-    if deleted:
-        database.remove_items(deleted)
+    request, skipped = build_operation_request(
+        job=job,
+        items=items,
+        settings=settings,
+        current_dir=validated_dir or "",
+    )
 
-    return {"deleted": len(deleted), "failed": len(failed), "errors": failed}
+    if not request["items"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="all items failed path validation",
+        )
+
+    op_file = write_operation_request(request, settings.operations_pending_dir)
+
+    return {
+        "operation_id": request["operation_id"],
+        "status": "pending_approval",
+        "operation_type": "move_to_trash",
+        "item_count": len(request["items"]),
+        "skipped_count": len(skipped),
+        "operation_file": str(op_file),
+        "message": "已提交删除请求，等待 Hermes 审批执行",
+    }
 
 
 def _run_scan(job_id: str) -> None:
