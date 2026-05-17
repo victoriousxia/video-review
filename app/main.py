@@ -246,6 +246,21 @@ def stream_video(item_id: str):
     return FileResponse(video_path, media_type=media_type)
 
 
+@app.get("/api/v1/frame-tasks")
+def list_frame_tasks() -> dict:
+    with frame_worker._lock:
+        active = []
+        for item_id, task in frame_worker._tasks.items():
+            if task.status in ("queued", "generating"):
+                active.append({
+                    "item_id": item_id,
+                    "status": task.status,
+                    "progress_current": task.progress_current,
+                    "progress_total": task.progress_total,
+                })
+    return {"tasks": active, "count": len(active)}
+
+
 @app.get("/api/v1/browse")
 def browse_directories(path: str | None = None) -> dict:
     allowed_roots = (settings.download_root, settings.library_root)

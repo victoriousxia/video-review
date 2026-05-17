@@ -192,6 +192,19 @@
     }
 
     .empty-state { text-align: center; padding: 40px 20px; color: #52525b; font-size: 14px; }
+
+    .task-status-bar {
+      display: none; align-items: center; gap: 10px; padding: 10px 16px;
+      background: #172554; border: 1px solid #1e40af; border-radius: 10px;
+      margin-bottom: 20px; font-size: 13px; color: #93c5fd;
+    }
+    .task-status-bar.active { display: flex; }
+    .task-status-bar .spinner {
+      display: inline-block; width: 14px; height: 14px;
+      border: 2px solid #1e40af; border-top-color: #60a5fa;
+      border-radius: 50%; animation: spin 0.6s linear infinite;
+      flex-shrink: 0;
+    }
   </style>
 </head>
 <body>
@@ -243,6 +256,12 @@
         {% endif %}
       {% endfor %}
     {% endif %}
+  </div>
+
+  <!-- Frame task status -->
+  <div class="task-status-bar" id="taskStatusBar">
+    <span class="spinner"></span>
+    <span id="taskStatusText"></span>
   </div>
 
   <!-- Subdirectories -->
@@ -634,6 +653,46 @@ async function confirmDeleteFiles() {
     alert('请求失败');
   }
 }
+
+// Frame task status polling
+let _taskPollTimer = null;
+
+async function pollFrameTasks() {
+  try {
+    const res = await fetch('/api/v1/frame-tasks');
+    const data = await res.json();
+    const bar = document.getElementById('taskStatusBar');
+    const text = document.getElementById('taskStatusText');
+    if (data.count > 0) {
+      const generating = data.tasks.filter(t => t.status === 'generating');
+      const queued = data.tasks.filter(t => t.status === 'queued');
+      let msg = '';
+      if (generating.length > 0) {
+        const t = generating[0];
+        msg = '正在生成截图 (' + t.progress_current + '/' + t.progress_total + ')';
+        if (generating.length + queued.length > 1) {
+          msg += '，队列中还有 ' + (generating.length + queued.length - 1) + ' 个任务';
+        }
+      } else {
+        msg = queued.length + ' 个截图任务排队中';
+      }
+      text.textContent = msg;
+      bar.classList.add('active');
+    } else {
+      bar.classList.remove('active');
+      clearInterval(_taskPollTimer);
+      _taskPollTimer = null;
+    }
+  } catch (e) { /* ignore */ }
+}
+
+function startTaskPolling() {
+  if (_taskPollTimer) return;
+  pollFrameTasks();
+  _taskPollTimer = setInterval(pollFrameTasks, 1500);
+}
+
+startTaskPolling();
 </script>
 </body>
 </html>
