@@ -44,14 +44,6 @@ class Settings(BaseSettings):
     def logs_dir(self) -> Path:
         return self.data_dir / "logs"
 
-    @property
-    def operations_dir(self) -> Path:
-        return self.data_dir / "operations"
-
-    @property
-    def operations_pending_dir(self) -> Path:
-        return self.operations_dir / "pending"
-
 
 def load_version() -> str:
     for candidate in (Path("/app/VERSION"), Path(__file__).resolve().parents[1] / "VERSION"):
