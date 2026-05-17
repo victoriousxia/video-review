@@ -121,22 +121,27 @@ NAS 工作目录：`/nas/docker/video-review`
 - [x] 删除 jobs.html 和对应路由
 - [x] 测试全部通过（53 passed）
 
+## 当前状态
+
+- 当前删除模式：Web 页面直接删除，不走 Hermes 审批，不走 HTTP hook。
+- 删除前置条件：用户先把文件标记为“待删除”，再点击页面顶部“删除文件（N）”按钮，并通过浏览器确认弹窗。
+- 后端行为：`POST /api/v1/jobs/{job_id}/delete-files` 删除当前目录范围内标记为 `delete_later` 的文件，并从 SQLite 任务条目中移除对应记录。
+- 媒体挂载：正式部署需要 `/media/download` 和 `/media/library` 都是读写挂载。
+- 当前仓库最新提交：`2e5c45c chore: align direct delete deployment docs`，已推送 `origin/main`。
+
 ## 待实现
 
 - ffprobe 元数据提取
-- 截图批次生成和重新生成
-- Review 决策保存
-- 整理建议
-- dry-run 执行计划
-- Hermes 触发通知
-- 安全执行器
+- 更完善的整理建议
+- 非删除类操作（移动/重命名）仍需单独设计安全流程
+- Lucky 外部访问 smoke test 仍建议从 NAS UI、Mac 浏览器或宿主网络路径验证
 
 ## 最近验证
 
 - GitHub SSH deploy key 之前已验证可用于 `victoriousxia/video-review`。
 - `docker build -t video-review:v0.2.0 .` 之前已在 NAS 上成功，不需要 `apt-get`，也不需要改 Docker daemon DNS。
 - 当前正式运行容器名：`video-review`。
-- 当前正式运行镜像：`video-review:v0.3.2`。
+- 当前正式运行镜像：`video-review:latest`。
 - 当前正式运行模式：`--network host`，应用直接监听 NAS 宿主网络 `0.0.0.0:8818`。
 - 当前数据挂载：`/vol2/1000/Docker/video-review/data -> /app/data`。
 - 当前媒体挂载：`/vol1/1000/Download -> /media/download:rw`，`/vol1/1000/Media -> /media/library:rw`。
