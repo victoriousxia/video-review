@@ -36,23 +36,7 @@ v0.2.0 不会修改任何媒体文件。
 
 ## 删除策略
 
-P0 起，Web UI 中的“删除”不是直接删除文件，而是创建 Hermes 审批执行的操作请求。
-
-操作请求文件写入：
-
-```text
-/app/data/operations/pending/<operation_id>.json
-```
-
-Hermes 从 NAS 路径读取：
-
-```text
-/nas/docker/video-review/data/operations/pending/<operation_id>.json
-```
-
-协议见：`docs/file-operation-protocol.md`。
-
-后续即使用户标记“可删除”，系统也只会先移动到类似路径：
+后续版本即使用户标记“可删除”，系统也只会先移动到类似路径：
 
 ```text
 /media/download/.video-review-trash/<job_id>/
