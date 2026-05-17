@@ -11,6 +11,11 @@ class Settings(BaseSettings):
     port: int = Field(default=8818, alias="VIDEO_REVIEW_PORT")
     data_dir: Path = Field(default=Path("/app/data"), alias="VIDEO_REVIEW_DATA_DIR")
     public_base_url: str = Field(default="", alias="VIDEO_REVIEW_PUBLIC_BASE_URL")
+    hermes_notify_enabled: bool = Field(default=True, alias="VIDEO_REVIEW_HERMES_NOTIFY_ENABLED")
+    hermes_notify_script: Path = Field(
+        default=Path("/nas/docker/video-review/scripts/hermes_pending_operation_notify.py"),
+        alias="VIDEO_REVIEW_HERMES_NOTIFY_SCRIPT",
+    )
     download_root: Path = Field(default=Path("/media/download"), alias="VIDEO_REVIEW_DOWNLOAD_ROOT")
     library_root: Path = Field(default=Path("/media/library"), alias="VIDEO_REVIEW_LIBRARY_ROOT")
     auth_mode: str = Field(default="proxy", alias="VIDEO_REVIEW_AUTH_MODE")

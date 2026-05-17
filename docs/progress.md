@@ -71,7 +71,7 @@ NAS 工作目录：`/nas/docker/video-review`
 
 ## 进行中
 
-- P0 Hermes 审批执行文件操作：协议文档已建立，下一步实现 `video-review` 只生成 operation request，Hermes 审批后执行。
+- P0 Hermes 审批执行文件操作：Web app 已改为只生成 pending operation，并加入删除审批闭环的 video-review 侧能力：即时 notify hook、approval state 持久化、Telegram/微信回复 resolver、watchdog 兜底补发。下一步交给 Claude Code 接入 Hermes gateway 消息路由。
 - v0.3.4 设置模块：帧生成参数配置 + 资源管理
 
 ### P0 Hermes 审批执行文件操作
@@ -83,7 +83,7 @@ NAS 工作目录：`/nas/docker/video-review`
 - Web UI 的删除/整理操作不直接修改真实媒体文件。
 - video-review 只写 `/app/data/operations/pending/<operation_id>.json`。
 - Hermes 从 `/nas/docker/video-review/data/operations/pending/` 读取请求。
-- Hermes 通过 Telegram/微信请求确认。
+- Hermes 通过 Telegram/微信请求确认；当前仓库已提供 notify hook 和 `resolve-reply`，但 Hermes gateway 消息路由尚未接入。
 - 用户确认后，Hermes 执行移动到回收站、后续整理/改名等操作。
 - 第一阶段删除语义为 `move_to_trash`，不是永久删除。
 

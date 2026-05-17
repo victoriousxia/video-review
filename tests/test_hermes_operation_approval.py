@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from scripts.hermes_operation_approval import run_action, telegram_menu_payload, weixin_prompt
+from scripts.hermes_operation_approval import resolve_reply, run_action, telegram_menu_payload, weixin_prompt
 from scripts.hermes_operation_executor import OperationExecutor
 from tests.test_hermes_operation_executor import make_operation, write_pending
 
@@ -44,6 +44,7 @@ def test_weixin_prompt_asks_for_reply_number(tmp_path):
     assert "1. 扔垃圾桶" in prompt
     assert "2. 立刻删除" in prompt
     assert "3. 取消" in prompt
+    assert "操作码: VR-" in prompt
     assert "请回复序号：1 / 2 / 3" in prompt
 
 
@@ -87,3 +88,80 @@ def test_run_action_choice_numbers_execute_safe_operations_and_delete_requires_e
     assert cancel_result["status"] == "rejected"
     assert third.exists()
     assert (operations / "rejected" / "op_cancel.json").exists()
+
+
+def test_resolve_reply_matches_single_active_operation_and_marks_state(tmp_path):
+    root = tmp_path / "download"
+    source = root / "Show" / "E01.mkv"
+    source.parent.mkdir(parents=True)
+    source.write_text("abc", encoding="utf-8")
+    operations = tmp_path / "operations"
+    write_pending(operations, make_operation(root, op_id="op_reply", rel="Show/E01.mkv"))
+
+    result = resolve_reply(
+        operations,
+        platform="weixin",
+        chat_id="wx-chat",
+        thread_id=None,
+        text="1",
+    )
+
+    assert result["handled"] is True
+    assert result["operation_id"] == "op_reply"
+    assert "已扔垃圾桶" in result["message"]
+    assert not source.exists()
+
+
+def test_resolve_reply_reports_ambiguity_for_multiple_active_operations(tmp_path):
+    root = tmp_path / "download"
+    first = root / "Show" / "E01.mkv"
+    second = root / "Show" / "E02.mkv"
+    first.parent.mkdir(parents=True)
+    first.write_text("abc", encoding="utf-8")
+    second.write_text("abc", encoding="utf-8")
+    operations = tmp_path / "operations"
+    write_pending(operations, make_operation(root, op_id="op_a", rel="Show/E01.mkv"))
+    write_pending(operations, make_operation(root, op_id="op_b", rel="Show/E02.mkv"))
+
+    result = resolve_reply(
+        operations,
+        platform="telegram",
+        chat_id="tg-chat",
+        thread_id="1902",
+        text="1",
+    )
+
+    assert result["handled"] is True
+    assert result["ambiguous"] is True
+    assert "当前有多个" in result["message"]
+    assert first.exists()
+    assert second.exists()
+
+
+def test_resolve_reply_token_selects_operation_when_multiple_active(tmp_path):
+    root = tmp_path / "download"
+    first = root / "Show" / "E01.mkv"
+    second = root / "Show" / "E02.mkv"
+    first.parent.mkdir(parents=True)
+    first.write_text("abc", encoding="utf-8")
+    second.write_text("abc", encoding="utf-8")
+    operations = tmp_path / "operations"
+    write_pending(operations, make_operation(root, op_id="op_a", rel="Show/E01.mkv"))
+    write_pending(operations, make_operation(root, op_id="op_b", rel="Show/E02.mkv"))
+
+    from scripts.hermes_operation_state import operation_token
+
+    token_b = operation_token("op_b")
+
+    result = resolve_reply(
+        operations,
+        platform="telegram",
+        chat_id="tg-chat",
+        thread_id="1902",
+        text=f"1 {token_b}",
+    )
+
+    assert result["handled"] is True
+    assert result["operation_id"] == "op_b"
+    assert first.exists()
+    assert not second.exists()
