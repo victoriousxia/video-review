@@ -73,7 +73,7 @@ def test_post_jobs_form_rejects_invalid_path(tmp_path, monkeypatch):
     assert resp.status_code == 400
 
 
-def test_post_jobs_form_rejects_empty_name(tmp_path, monkeypatch):
+def test_post_jobs_form_uses_path_name_when_name_is_empty(tmp_path, monkeypatch):
     media, client = _setup(tmp_path, monkeypatch)
 
     resp = client.post(
@@ -82,7 +82,11 @@ def test_post_jobs_form_rejects_empty_name(tmp_path, monkeypatch):
         follow_redirects=False,
     )
 
-    assert resp.status_code == 400
+    assert resp.status_code == 303
+    job_id = resp.headers["location"].split("/jobs/")[1]
+    detail = client.get(f"/api/v1/jobs/{job_id}")
+    assert detail.status_code == 200
+    assert detail.json()["job"]["name"] == media.name
 
 
 def test_job_detail_page_shows_scan_button_for_pending(tmp_path, monkeypatch):

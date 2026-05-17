@@ -26,7 +26,7 @@ v0.3.2 在 v0.3.0 基础上补齐了 Web 创建任务、多层目录 Review 和 
 - 重新扫描会替换旧条目，避免重复生成 review_items
 - Job 状态正确流转：pending → running → ready/failed
 
-注意：v0.3.2 不会调用 ffprobe 提取元数据，不会生成截图，也不会移动、重命名或删除任何媒体文件。
+注意：当前版本会扫描目录、生成截图，并且在用户通过浏览器确认后直接删除标记为“待删除”的文件。
 
 ## 架构原则
 
@@ -38,17 +38,17 @@ video-review 负责：
 - 保存任务和条目数据
 - 提供 Web UI
 - 提供 HTTP API
-- 后续负责扫描、截图、Review 决策、执行计划
+- 扫描、截图、Review 决策
+- 在用户点击删除并通过浏览器弹窗确认后，直接删除标记为“待删除”的文件
 
-Hermes 负责：
+Hermes 可选负责：
 
 - 根据聊天命令触发扫描
 - 给用户发送 Review 链接和通知
 - 读取 Review 进度
-- 在执行整理前向用户确认
-- 调用 video-review API 执行后续动作
+- 调用 video-review API 创建/查询任务
 
-这样设计可以避免项目和 Hermes 强耦合。以后即使用 curl、cron、Mac 脚本或其他自动化服务，也可以调用 video-review。
+这样设计可以避免项目和 Hermes 强耦合。当前删除流程不依赖 Hermes 审批或 HTTP hook。
 
 ## 目录结构
 
@@ -88,8 +88,8 @@ sudo docker run -d \
   -e VIDEO_REVIEW_DOWNLOAD_ROOT=/media/download \
   -e VIDEO_REVIEW_LIBRARY_ROOT=/media/library \
   -v /vol2/1000/Docker/video-review/data:/app/data \
-  -v /vol1/1000/Download:/media/download:ro \
-  -v /vol1/1000/Media:/media/library:ro \
+  -v /vol1/1000/Download:/media/download:rw \
+  -v /vol1/1000/Media:/media/library:rw \
   video-review:v0.3.2
 ```
 

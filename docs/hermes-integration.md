@@ -1,6 +1,6 @@
 # Hermes Integration
 
-video-review is not strongly coupled to Hermes.
+video-review is not strongly coupled to Hermes. Current deletion is handled inside the web app after browser confirmation; there is no Hermes approval workflow or HTTP hook in the current deployment.
 
 ## Recommended model
 
@@ -11,9 +11,9 @@ The Docker service exposes standard HTTP endpoints and later a CLI. Hermes acts 
 - video-review returns job id and URL
 - Hermes sends the URL to the same message channel
 - user reviews in browser
-- user says: generate plan or execute
-- Hermes calls dry-run API, summarizes, and asks for explicit confirmation
-- Hermes calls execution API only after confirmation
+- user marks files as delete_later
+- user clicks the delete button and confirms the browser dialog
+- video-review deletes the marked files directly through its writable media mounts
 
 ## Why not strong coupling
 
@@ -28,9 +28,8 @@ Strong coupling would make the app hard to use from Mac, cron, shell, or other s
 - `GET /api/v1/jobs/{job_id}/progress`
 - `POST /api/v1/items/{item_id}/screenshots/regenerate`
 - `POST /api/v1/items/{item_id}/decision`
-- `POST /api/v1/jobs/{job_id}/plan`
-- `POST /api/v1/jobs/{job_id}/execute` guarded by confirmation token in later versions
+- `POST /api/v1/jobs/{job_id}/delete-files`
 
 ## Notifications
 
-video-review should not send Telegram/WeChat messages itself in V1. It returns machine-readable status and links; Hermes delivers the notification through the active channel.
+video-review does not send Telegram/WeChat messages itself. In the current direct-delete mode, deletion confirmation happens in the browser instead of through Hermes chat approval.

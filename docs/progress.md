@@ -139,7 +139,7 @@ NAS 工作目录：`/nas/docker/video-review`
 - 当前正式运行镜像：`video-review:v0.3.2`。
 - 当前正式运行模式：`--network host`，应用直接监听 NAS 宿主网络 `0.0.0.0:8818`。
 - 当前数据挂载：`/vol2/1000/Docker/video-review/data -> /app/data`。
-- 当前媒体挂载：`/vol1/1000/Download -> /media/download:ro`，`/vol1/1000/Media -> /media/library:ro`。
+- 当前媒体挂载：`/vol1/1000/Download -> /media/download:rw`，`/vol1/1000/Media -> /media/library:rw`。
 - 容器内部已验证：`GET /healthz`、`GET /api/v1/info`、`GET /api/v1/jobs` 正常。
 - 老 SQLite 数据库已在启动时迁移到 schema v2，`review_items.extension` 和 `review_items.file_mtime` 存在。
 - 单元测试在项目镜像真实挂载路径下通过：`54 passed`。

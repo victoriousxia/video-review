@@ -71,12 +71,13 @@ def service_info() -> dict:
             "scan_jobs": True,
             "screenshot_batches": False,
             "execution_plans": False,
-            "media_mutation": False,
+            "media_mutation": True,
         },
         "safety": {
-            "review_only": True,
+            "review_only": False,
             "moves_files": False,
-            "deletes_files": False,
+            "deletes_files": True,
+            "delete_confirmation": "browser-confirm-dialog",
         },
     }
 

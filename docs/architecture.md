@@ -51,15 +51,15 @@ Hermes 通过稳定接口集成：
 容器内默认路径：
 
 ```text
-/media/download   下载目录，只读
-/media/library    媒体库目录，后续执行整理时可写
+/media/download   下载目录，可写，用于扫描和直接删除已确认文件
+/media/library    媒体库目录，可写，用于扫描和直接删除已确认文件
 /app/data         应用数据目录
 ```
 
 NAS 上的推荐映射：
 
 ```text
-/nas/download -> /media/download:ro
+/nas/download -> /media/download:rw
 /nas/media    -> /media/library:rw
 ./data        -> /app/data
 ```
@@ -74,20 +74,17 @@ NAS 上的推荐映射：
   -> 返回任务列表/任务详情
 ```
 
-当前版本只验证部署和任务记录链路。
+当前版本已验证部署、任务记录、扫描、截图和浏览器确认后的直接删除链路。
 
-## 后续完整流程
+## 当前完整流程
 
 ```text
-用户对 Hermes 说：整理某个目录 review 一下
-  -> Hermes 调用 video-review 创建扫描任务
-  -> video-review 扫描目录、提取元数据、生成截图
-  -> Hermes 通知用户 Review 链接
-  -> 用户通过 Lucky 打开 Web 页面并保存 Review 决策
-  -> Hermes 查询 Review 进度
-  -> video-review 生成 dry-run 执行计划
-  -> Hermes 把计划摘要发给用户确认
-  -> 用户明确确认执行
-  -> video-review 安全移动/重命名/回收文件
-  -> Hermes 通知执行结果
+用户通过 Lucky/浏览器打开 video-review
+  -> 创建 Review 任务并扫描目录
+  -> video-review 扫描目录并生成截图
+  -> 用户在 Web 页面保存 Review 决策
+  -> 用户把文件标记为“待删除”
+  -> 用户点击“删除文件（N）”并确认浏览器弹窗
+  -> video-review 通过读写媒体挂载直接删除已确认文件
+  -> video-review 从 SQLite 任务条目中移除已删除文件
 ```

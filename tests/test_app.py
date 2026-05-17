@@ -30,9 +30,11 @@ def test_info_exposes_integration_mode_and_paths():
     assert body["capabilities"]["review_web"] is True
     assert body["capabilities"]["scan_jobs"] is True
     assert body["capabilities"]["screenshot_batches"] is False
-    assert body["safety"]["review_only"] is True
+    assert body["capabilities"]["media_mutation"] is True
+    assert body["safety"]["review_only"] is False
     assert body["safety"]["moves_files"] is False
-    assert body["safety"]["deletes_files"] is False
+    assert body["safety"]["deletes_files"] is True
+    assert body["safety"]["delete_confirmation"] == "browser-confirm-dialog"
 
 
 def test_index_page_renders():

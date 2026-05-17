@@ -54,7 +54,7 @@ sudo docker run -d \
   -e VIDEO_REVIEW_DOWNLOAD_ROOT=/media/download \
   -e VIDEO_REVIEW_LIBRARY_ROOT=/media/library \
   -v /vol2/1000/Docker/video-review/data:/app/data \
-  -v /vol1/1000/Download:/media/download:ro \
+  -v /vol1/1000/Download:/media/download:rw \
   -v /vol1/1000/Media:/media/library:rw \
   video-review:v0.2.0
 ```
