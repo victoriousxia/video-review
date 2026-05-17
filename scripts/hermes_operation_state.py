@@ -162,7 +162,11 @@ class ApprovalStore:
 
     def _entry_matches_channel(self, entry: dict[str, Any], platform: str, chat_id: str, thread_id: str | None) -> bool:
         for note in entry.get("notifications", {}).get(platform, []):
-            if str(note.get("chat_id")) != str(chat_id):
+            note_chat = str(note.get("chat_id"))
+            # A notification recorded with chat_id == platform name (e.g. "telegram")
+            # means it was sent to the home channel — match any chat on that platform.
+            is_home_wildcard = note_chat == platform
+            if not is_home_wildcard and note_chat != str(chat_id):
                 continue
             note_thread = note.get("thread_id")
             if thread_id is not None and note_thread is not None and str(note_thread) != str(thread_id):
@@ -195,7 +199,11 @@ class ApprovalStore:
 
         if confirm_operation_id:
             for entry in active:
-                if entry.get("operation_id") == confirm_operation_id and self._entry_matches_channel(entry, platform, chat_id, thread_id):
+                if (
+                    entry.get("operation_id") == confirm_operation_id
+                    and entry.get("status") == "awaiting_delete_confirmation"
+                    and self._entry_matches_channel(entry, platform, chat_id, thread_id)
+                ):
                     return {"status": "matched", "operation_id": entry["operation_id"], "choice": text.strip(), "entry": entry}
             return {"status": "no_match"}
 

@@ -115,15 +115,21 @@ def _resolve_via_import(
     sys.path.insert(0, str(SCRIPT_DIR.parent))
     from scripts.hermes_operation_approval import resolve_reply
 
-    result = resolve_reply(
-        operations_dir,
-        platform=platform,
-        chat_id=chat_id,
-        thread_id=thread_id,
-        text=text,
-        reply_to_message_id=reply_to_message_id,
-    )
-    return result
+    try:
+        result = resolve_reply(
+            operations_dir,
+            platform=platform,
+            chat_id=chat_id,
+            thread_id=thread_id,
+            text=text,
+            reply_to_message_id=reply_to_message_id,
+        )
+        return result
+    except Exception as exc:
+        # If resolve matched an operation but execution failed, still return
+        # handled=True so the error reaches the user instead of being swallowed
+        # by the LLM dispatch.
+        return {"handled": True, "message": f"video-review 审批执行出错：{exc}"}
 
 
 def _resolve_via_subprocess(

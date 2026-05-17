@@ -121,12 +121,17 @@ def send_text(target: str, message: str) -> None:
 
 
 def _ensure_state_for_pending_operations(operations_dir: Path, platform: str, chat_id: str, thread_id: str | None) -> ApprovalStore:
+    """Ensure all pending operations are tracked in the approval state file.
+
+    Only upserts operations — does NOT auto-register the current chat as a
+    notification target. Notification targets are set exclusively by the
+    notify script when it actually sends the approval message.
+    """
     store = ApprovalStore(operations_dir / ".hermes-approvals.json")
     pending_dir = operations_dir / "pending"
     for path in sorted(pending_dir.glob("*.json")):
         operation_id = path.stem
         store.upsert_operation(operation_id)
-        store.record_notification(operation_id, platform=platform, chat_id=chat_id, thread_id=thread_id)
     return store
 
 
