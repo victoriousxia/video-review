@@ -137,9 +137,8 @@ def _resolve_via_subprocess(
 ) -> dict[str, Any]:
     """Call resolve-reply via subprocess (for cross-container isolation)."""
     cmd = [
-        sys.executable, str(RESOLVE_SCRIPT),
+        sys.executable, str(RESOLVE_SCRIPT), "resolve-reply",
         "--operations-dir", str(operations_dir),
-        "resolve-reply",
         "--platform", platform,
         "--chat-id", chat_id,
         "--text", text,
