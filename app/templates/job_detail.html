@@ -103,10 +103,14 @@
     .action-btn.btn-regen { border-color: #27272a; color: #71717a; font-size: 11px; }
     .action-btn.btn-regen:hover { color: #a1a1aa; }
 
-    .video-panel {
+    .preview-panel {
       display: none; padding: 12px 16px 16px; border-top: 1px solid #27272a;
     }
-    .video-panel.open { display: block; }
+    .preview-panel.open { display: block; }
+    .preview-video { display: none; }
+    .preview-video.active { display: block; }
+    .preview-frames { display: none; }
+    .preview-frames.active { display: block; }
     .video-player-wrap {
       position: relative; width: 100%; border-radius: 8px; overflow: hidden;
       background: #000;
@@ -144,10 +148,6 @@
     .video-mute-btn:hover { color: #fafafa; }
     .video-mute-btn.unmuted { color: #4ade80; }
 
-    .frames-panel {
-      display: none; padding: 12px 16px 16px; border-top: 1px solid #27272a;
-    }
-    .frames-panel.open { display: block; }
     .frames-grid {
       display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
     }
@@ -279,25 +279,27 @@
           <button class="action-btn btn-delete {% if item.review_status == 'delete_later' %}active{% endif %}" onclick="event.stopPropagation();toggleDelete(this)">删除</button>
         </div>
       </div>
-      <div class="video-panel">
-        <div class="video-player-wrap">
-          <video preload="none" muted></video>
-        </div>
-        <div class="video-controls">
-          <button class="video-play-btn" onclick="videoPlayPause(this)">
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><polygon points="3,1 12,7 3,13"/></svg>
-          </button>
-          <div class="video-progress" onmousedown="videoSeekStart(event, this)">
-            <div class="video-progress-fill" style="width:0%"></div>
+      <div class="preview-panel">
+        <div class="preview-video">
+          <div class="video-player-wrap">
+            <video preload="none" muted></video>
           </div>
-          <span class="video-time">0:00 / 0:00</span>
-          <button class="video-mute-btn" onclick="videoToggleMute(this)" title="切换静音">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>
-          </button>
+          <div class="video-controls">
+            <button class="video-play-btn" onclick="videoPlayPause(this)">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><polygon points="3,1 12,7 3,13"/></svg>
+            </button>
+            <div class="video-progress" onmousedown="videoSeekStart(event, this)">
+              <div class="video-progress-fill" style="width:0%"></div>
+            </div>
+            <span class="video-time">0:00 / 0:00</span>
+            <button class="video-mute-btn" onclick="videoToggleMute(this)" title="切换静音">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>
+            </button>
+          </div>
         </div>
-      </div>
-      <div class="frames-panel">
-        <div class="frames-grid"></div>
+        <div class="preview-frames">
+          <div class="frames-grid"></div>
+        </div>
       </div>
     </div>
     {% endfor %}
@@ -323,21 +325,38 @@
 
 <script>
 const _pollers = {};
+const ICON_PLAY = '<svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><polygon points="3,1 12,7 3,13"/></svg>';
+const ICON_PAUSE = '<svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><rect x="2" y="1" width="3.5" height="12"/><rect x="8.5" y="1" width="3.5" height="12"/></svg>';
 
 async function togglePreview(btn) {
   const card = btn.closest('.file-card');
   const itemId = card.dataset.itemId;
-  const panel = card.querySelector('.frames-panel');
-  const grid = panel.querySelector('.frames-grid');
+  const panel = card.querySelector('.preview-panel');
+  const videoSection = panel.querySelector('.preview-video');
+  const framesSection = panel.querySelector('.preview-frames');
+  const video = panel.querySelector('video');
+  const grid = framesSection.querySelector('.frames-grid');
+  const playBtn = card.querySelector('.btn-play');
 
-  if (panel.classList.contains('open') && grid.querySelector('img')) {
+  if (panel.classList.contains('open')) {
     panel.classList.remove('open');
+    videoSection.classList.remove('active');
+    framesSection.classList.remove('active');
+    video.pause();
+    playBtn.classList.remove('active');
+    playBtn.innerHTML = '&#9654;';
+    const inlinePlayBtn = panel.querySelector('.video-play-btn');
+    inlinePlayBtn.innerHTML = ICON_PLAY;
     return;
   }
 
   panel.classList.add('open');
-  grid.innerHTML = '<div class="frames-loading"><span class="spinner"></span>检查中...</div>';
+  framesSection.classList.add('active');
+  videoSection.classList.remove('active');
 
+  if (grid.querySelector('img')) return;
+
+  grid.innerHTML = '<div class="frames-loading"><span class="spinner"></span>检查中...</div>';
   const statusData = await fetchStatus(itemId);
 
   if (statusData.status === 'done' && statusData.frames.length > 0) {
@@ -358,15 +377,61 @@ async function togglePreview(btn) {
   }
 }
 
-async function regenerateFrames(btn) {
+function toggleVideo(btn) {
   const card = btn.closest('.file-card');
   const itemId = card.dataset.itemId;
-  const panel = card.querySelector('.frames-panel');
+  const panel = card.querySelector('.preview-panel');
+  const videoSection = panel.querySelector('.preview-video');
+  const framesSection = panel.querySelector('.preview-frames');
+  const video = panel.querySelector('video');
+  const inlinePlayBtn = panel.querySelector('.video-play-btn');
+
+  if (!panel.classList.contains('open')) {
+    panel.classList.add('open');
+  }
+
+  if (videoSection.classList.contains('active') && !video.paused) {
+    video.pause();
+    btn.innerHTML = '&#9654;';
+    btn.classList.remove('active');
+    inlinePlayBtn.innerHTML = ICON_PLAY;
+    return;
+  }
+
+  framesSection.classList.remove('active');
+  videoSection.classList.add('active');
+
+  if (!video.src) {
+    video.src = '/api/v1/items/' + itemId + '/video';
+    video.addEventListener('timeupdate', function() {
+      const fill = panel.querySelector('.video-progress-fill');
+      const timeEl = panel.querySelector('.video-time');
+      if (video.duration) {
+        fill.style.width = (video.currentTime / video.duration * 100) + '%';
+        timeEl.textContent = fmtTime(video.currentTime) + ' / ' + fmtTime(video.duration);
+      }
+    });
+    video.addEventListener('ended', function() {
+      btn.innerHTML = '&#9654;';
+      btn.classList.remove('active');
+      inlinePlayBtn.innerHTML = ICON_PLAY;
+    });
+  }
+  video.play();
+  btn.innerHTML = '&#10074;&#10074;';
+  btn.classList.add('active');
+  inlinePlayBtn.innerHTML = ICON_PAUSE;
+}
+
+async function regenerateFrames(regenBtn) {
+  const card = regenBtn.closest('.file-card');
+  const itemId = card.dataset.itemId;
+  const panel = card.querySelector('.preview-panel');
   const grid = panel.querySelector('.frames-grid');
 
   grid.innerHTML = '<div class="frames-loading"><span class="spinner"></span>已提交重新生成...</div>';
   await fetch('/api/v1/items/' + itemId + '/frames?force=true', { method: 'POST' });
-  startPolling(itemId, grid, btn);
+  startPolling(itemId, grid, card.querySelector('.file-card-main'));
 }
 
 function startPolling(itemId, grid, previewBtn) {
@@ -489,56 +554,26 @@ document.addEventListener('keydown', function(e) {
   else if (e.key === 'ArrowRight') { _lightboxIndex = (_lightboxIndex + 1) % _lightboxFrames.length; showLightboxFrame(); }
 });
 
-function toggleVideo(btn) {
-  const card = btn.closest('.file-card');
-  const itemId = card.dataset.itemId;
-  const panel = card.querySelector('.video-panel');
-  const video = panel.querySelector('video');
-
-  if (panel.classList.contains('open')) {
-    panel.classList.remove('open');
-    btn.classList.remove('active');
-    video.pause();
-    return;
-  }
-
-  panel.classList.add('open');
-  btn.classList.add('active');
-
-  if (!video.src) {
-    video.src = '/api/v1/items/' + itemId + '/video';
-    video.addEventListener('timeupdate', function() {
-      const fill = panel.querySelector('.video-progress-fill');
-      const timeEl = panel.querySelector('.video-time');
-      if (video.duration) {
-        fill.style.width = (video.currentTime / video.duration * 100) + '%';
-        timeEl.textContent = fmtTime(video.currentTime) + ' / ' + fmtTime(video.duration);
-      }
-    });
-    video.addEventListener('ended', function() {
-      const playBtn = panel.querySelector('.video-play-btn');
-      playBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><polygon points="3,1 12,7 3,13"/></svg>';
-    });
-  }
-  video.play();
-  const playBtn = panel.querySelector('.video-play-btn');
-  playBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><rect x="2" y="1" width="3.5" height="12"/><rect x="8.5" y="1" width="3.5" height="12"/></svg>';
-}
-
 function videoPlayPause(btn) {
-  const panel = btn.closest('.video-panel');
+  const panel = btn.closest('.preview-panel');
+  const card = panel.closest('.file-card');
   const video = panel.querySelector('video');
+  const actionPlayBtn = card.querySelector('.btn-play');
   if (video.paused) {
     video.play();
-    btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><rect x="2" y="1" width="3.5" height="12"/><rect x="8.5" y="1" width="3.5" height="12"/></svg>';
+    btn.innerHTML = ICON_PAUSE;
+    actionPlayBtn.innerHTML = '&#10074;&#10074;';
+    actionPlayBtn.classList.add('active');
   } else {
     video.pause();
-    btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><polygon points="3,1 12,7 3,13"/></svg>';
+    btn.innerHTML = ICON_PLAY;
+    actionPlayBtn.innerHTML = '&#9654;';
+    actionPlayBtn.classList.remove('active');
   }
 }
 
 function videoSeekStart(e, bar) {
-  const panel = bar.closest('.video-panel');
+  const panel = bar.closest('.preview-panel');
   const video = panel.querySelector('video');
   const fill = bar.querySelector('.video-progress-fill');
 
@@ -563,7 +598,7 @@ function videoSeekStart(e, bar) {
 }
 
 function videoToggleMute(btn) {
-  const panel = btn.closest('.video-panel');
+  const panel = btn.closest('.preview-panel');
   const video = panel.querySelector('video');
   video.muted = !video.muted;
   if (video.muted) {
