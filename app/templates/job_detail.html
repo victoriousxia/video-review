@@ -381,6 +381,23 @@ const _pollers = {};
 const ICON_PLAY = '<svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><polygon points="3,1 12,7 3,13"/></svg>';
 const ICON_PAUSE = '<svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><rect x="2" y="1" width="3.5" height="12"/><rect x="8.5" y="1" width="3.5" height="12"/></svg>';
 
+function closeOtherPreviews(exceptCard) {
+  document.querySelectorAll('.file-card').forEach(card => {
+    if (card === exceptCard) return;
+    const panel = card.querySelector('.preview-panel');
+    if (!panel || !panel.classList.contains('open')) return;
+    const video = panel.querySelector('video');
+    const playBtn = card.querySelector('.btn-play');
+    panel.classList.remove('open');
+    panel.querySelector('.preview-video').classList.remove('active');
+    panel.querySelector('.preview-frames').classList.remove('active');
+    video.pause();
+    playBtn.classList.remove('active');
+    playBtn.innerHTML = '&#9654;';
+    panel.querySelector('.video-play-btn').innerHTML = ICON_PLAY;
+  });
+}
+
 async function togglePreview(btn) {
   const card = btn.closest('.file-card');
   const itemId = card.dataset.itemId;
@@ -403,6 +420,7 @@ async function togglePreview(btn) {
     return;
   }
 
+  closeOtherPreviews(card);
   panel.classList.add('open');
   framesSection.classList.add('active');
   videoSection.classList.remove('active');
@@ -440,6 +458,7 @@ function toggleVideo(btn) {
   const inlinePlayBtn = panel.querySelector('.video-play-btn');
 
   if (!panel.classList.contains('open')) {
+    closeOtherPreviews(card);
     panel.classList.add('open');
   }
 
@@ -532,7 +551,8 @@ function renderFrames(grid, frames, cardMain) {
     regenBtn.className = 'action-btn btn-regen';
     regenBtn.textContent = '重新生成';
     regenBtn.onclick = function(e) { e.stopPropagation(); regenerateFrames(this); };
-    actions.appendChild(regenBtn);
+    const playBtn = actions.querySelector('.btn-play');
+    actions.insertBefore(regenBtn, playBtn);
   }
 }
 
