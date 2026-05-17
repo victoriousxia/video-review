@@ -1,7 +1,6 @@
 from contextlib import asynccontextmanager
 from dataclasses import asdict
 from pathlib import Path
-import subprocess
 
 from fastapi import FastAPI, Form, HTTPException, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -48,23 +47,6 @@ frame_worker = FrameWorker(
     default_skip_percent=settings.frames_skip_percent,
     default_timeout=settings.frames_timeout,
 )
-
-
-def notify_hermes_pending_operation(operation_id: str) -> None:
-    if not settings.hermes_notify_enabled:
-        return
-    script = settings.hermes_notify_script
-    if not script.exists():
-        return
-    try:
-        subprocess.Popen(
-            ["python3", str(script), operation_id, "--operations-dir", str(settings.operations_dir)],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            start_new_session=True,
-        )
-    except OSError:
-        return
 
 
 def service_info() -> dict:
@@ -401,7 +383,6 @@ def delete_marked_files(job_id: str, dir: str | None = None) -> dict:
         )
 
     op_file = write_operation_request(request, settings.operations_pending_dir)
-    notify_hermes_pending_operation(request["operation_id"])
 
     return {
         "operation_id": request["operation_id"],
