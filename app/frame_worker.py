@@ -9,6 +9,10 @@ from typing import Callable
 from .frames import generate_frames_with_progress, list_frames
 
 
+class _CancelledError(Exception):
+    pass
+
+
 @dataclass
 class FrameTaskStatus:
     status: str = "idle"
@@ -38,6 +42,7 @@ class FrameWorker:
         self._executor = ThreadPoolExecutor(max_workers=max_workers)
         self._lock = threading.Lock()
         self._tasks: dict[str, FrameTaskStatus] = {}
+        self._cancelled: set[str] = set()
 
     def submit(self, item_id: str, video_path: str, force: bool = False) -> dict:
         with self._lock:
@@ -92,6 +97,10 @@ class FrameWorker:
 
     def _generate(self, item_id: str, video_path: str, force: bool) -> None:
         with self._lock:
+            if item_id in self._cancelled:
+                self._cancelled.discard(item_id)
+                self._tasks.pop(item_id, None)
+                return
             task = self._tasks.get(item_id)
             if not task:
                 return
@@ -102,6 +111,8 @@ class FrameWorker:
 
         def on_progress(current: int, total: int) -> None:
             with self._lock:
+                if item_id in self._cancelled:
+                    raise _CancelledError()
                 t = self._tasks.get(item_id)
                 if t:
                     t.progress_current = current
@@ -125,6 +136,10 @@ class FrameWorker:
                     task.status = "done"
                     task.progress_current = len(filenames)
                     task.progress_total = len(filenames)
+        except _CancelledError:
+            with self._lock:
+                self._cancelled.discard(item_id)
+                self._tasks.pop(item_id, None)
         except Exception as exc:
             with self._lock:
                 task = self._tasks.get(item_id)
