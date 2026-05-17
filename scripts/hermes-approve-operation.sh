@@ -49,30 +49,30 @@ main() {
   run_executor plan "$op_id"
 
   printf '\n操作选项：\n'
-  printf '1. 扔垃圾桶\n'
-  printf '2. 立刻删除\n'
-  printf '3. 取消\n'
+  printf '1. 批准并移动到 .video-review-trash\n'
+  printf '2. 拒绝请求\n'
+  printf '3. 退出，不处理\n'
   printf '请选择：'
   read -r action
 
   case "$action" in
     1)
-      print_header "扔垃圾桶结果"
-      run_executor execute "$op_id" --confirm "$op_id"
+      printf '\n请输入确认码 %s：' "$op_id"
+      read -r confirm
+      print_header "执行结果"
+      run_executor execute "$op_id" --confirm "$confirm"
       ;;
     2)
-      printf '\n危险：立刻删除会永久 unlink 文件，不进入 .video-review-trash。\n'
-      printf '如确认永久删除，请输入 DELETE_PERMANENTLY %s：' "$op_id"
-      read -r confirm
-      print_header "立刻删除结果"
-      run_executor delete-permanently "$op_id" --confirm "$confirm"
-      ;;
-    3)
-      print_header "取消结果"
-      run_executor reject "$op_id" --reason "cancelled by user"
+      printf '\n拒绝原因（可留空）：'
+      read -r reason
+      if [ -z "$reason" ]; then
+        reason="rejected by user"
+      fi
+      print_header "拒绝结果"
+      run_executor reject "$op_id" --reason "$reason"
       ;;
     *)
-      echo "选项无效，未执行任何文件操作。"
+      echo "已退出，未执行任何文件操作。"
       ;;
   esac
 }
