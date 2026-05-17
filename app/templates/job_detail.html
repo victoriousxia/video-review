@@ -376,9 +376,9 @@
 
 <!-- Lightbox -->
 <div class="lightbox" id="lightbox" onclick="onLightboxClick(event)">
-  <button class="lightbox-nav prev" onclick="navLightbox(-1)">&lsaquo;</button>
+  <button class="lightbox-nav prev" onclick="navLightbox(event,-1)">&lsaquo;</button>
   <img id="lightboxImg" src="" alt="" onclick="event.stopPropagation();closeLightbox()">
-  <button class="lightbox-nav next" onclick="navLightbox(1)">&rsaquo;</button>
+  <button class="lightbox-nav next" onclick="navLightbox(event,1)">&rsaquo;</button>
   <div class="lightbox-counter" id="lightboxCounter"></div>
 </div>
 
@@ -557,7 +557,7 @@ async function fetchStatus(itemId) {
 function renderFrames(grid, frames, cardMain) {
   const ts = Date.now();
   grid.innerHTML = frames.map(url =>
-    '<img src="' + url + '?t=' + ts + '" onclick="openLightbox(this.src)" loading="lazy">'
+    '<img src="' + url + '?t=' + ts + '" onclick="openLightbox(event, this.src)" loading="lazy">'
   ).join('');
 
   const actions = cardMain.querySelector('.file-actions');
@@ -602,9 +602,9 @@ async function toggleDelete(btn) {
   } catch (e) { /* ignore */ }
 }
 
-function openLightbox(src) {
-  event.stopPropagation();
-  const img = event.target;
+function openLightbox(e, src) {
+  e.stopPropagation();
+  const img = e.target;
   const grid = img.closest('.frames-grid');
   _lightboxFrames = Array.from(grid.querySelectorAll('img')).map(i => i.src);
   _lightboxIndex = _lightboxFrames.indexOf(src);
@@ -621,8 +621,8 @@ function showLightboxFrame() {
   document.getElementById('lightboxCounter').textContent = (_lightboxIndex + 1) + ' / ' + _lightboxFrames.length;
 }
 
-function navLightbox(dir) {
-  event.stopPropagation();
+function navLightbox(e, dir) {
+  e.stopPropagation();
   _lightboxIndex = (_lightboxIndex + dir + _lightboxFrames.length) % _lightboxFrames.length;
   showLightboxFrame();
 }
@@ -765,10 +765,11 @@ async function pollFrameTasks() {
           ? t.progress_current + '/' + t.progress_total
           : '排队中';
         const name = t.file_name.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        const safeId = t.item_id.replace(/'/g, "\\'");
         return '<div class="task-item">' +
           '<span class="task-item-name">' + name + '</span>' +
           '<span class="task-item-progress">' + prog + '</span>' +
-          '<button class="task-item-cancel" onclick="cancelTask(\'' + t.item_id + '\')">取消</button>' +
+          '<button class="task-item-cancel" onclick="cancelTask(\'' + safeId + '\')">取消</button>' +
           '</div>';
       }).join('');
 

@@ -50,7 +50,7 @@ class FrameWorker:
             if task and task.status in ("queued", "generating") and not force:
                 return self._status_dict(item_id, task)
             if force and task and task.status in ("queued", "generating"):
-                pass
+                self._cancelled.add(item_id)
             task = FrameTaskStatus(status="queued", progress_total=self._default_count)
             self._tasks[item_id] = task
 
