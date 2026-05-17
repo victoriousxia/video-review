@@ -71,6 +71,25 @@ class FrameWorker:
 
         return {"status": "idle", "progress": None, "error": None, "frames": []}
 
+    def cancel(self, item_id: str) -> bool:
+        with self._lock:
+            task = self._tasks.get(item_id)
+            if not task or task.status not in ("queued", "generating"):
+                return False
+            self._cancelled.add(item_id)
+            task.status = "cancelled"
+            return True
+
+    def cancel_all(self) -> int:
+        with self._lock:
+            count = 0
+            for item_id, task in self._tasks.items():
+                if task.status in ("queued", "generating"):
+                    self._cancelled.add(item_id)
+                    task.status = "cancelled"
+                    count += 1
+            return count
+
     def _generate(self, item_id: str, video_path: str, force: bool) -> None:
         with self._lock:
             task = self._tasks.get(item_id)

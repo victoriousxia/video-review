@@ -194,17 +194,46 @@
     .empty-state { text-align: center; padding: 40px 20px; color: #52525b; font-size: 14px; }
 
     .task-status-bar {
-      display: none; align-items: center; gap: 10px; padding: 10px 16px;
+      display: none; padding: 12px 16px;
       background: #172554; border: 1px solid #1e40af; border-radius: 10px;
       margin-bottom: 20px; font-size: 13px; color: #93c5fd;
     }
-    .task-status-bar.active { display: flex; }
-    .task-status-bar .spinner {
+    .task-status-bar.active { display: block; }
+    .task-status-header {
+      display: flex; align-items: center; gap: 10px; cursor: pointer;
+    }
+    .task-status-header .spinner {
       display: inline-block; width: 14px; height: 14px;
       border: 2px solid #1e40af; border-top-color: #60a5fa;
       border-radius: 50%; animation: spin 0.6s linear infinite;
       flex-shrink: 0;
     }
+    .task-status-header .summary { flex: 1; }
+    .task-status-header .toggle-icon { color: #60a5fa; font-size: 11px; transition: transform 0.2s; }
+    .task-status-bar.expanded .toggle-icon { transform: rotate(180deg); }
+    .task-cancel-all {
+      padding: 3px 8px; font-size: 11px; border-radius: 4px;
+      background: rgba(239,68,68,0.15); border: 1px solid #7f1d1d; color: #f87171;
+      cursor: pointer; transition: background 0.15s;
+    }
+    .task-cancel-all:hover { background: rgba(239,68,68,0.3); }
+    .task-list {
+      display: none; margin-top: 10px; border-top: 1px solid #1e40af; padding-top: 8px;
+    }
+    .task-status-bar.expanded .task-list { display: block; }
+    .task-item {
+      display: flex; align-items: center; gap: 8px; padding: 6px 0;
+      border-bottom: 1px solid rgba(30,64,175,0.3);
+    }
+    .task-item:last-child { border-bottom: none; }
+    .task-item-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+    .task-item-progress { font-size: 11px; color: #60a5fa; white-space: nowrap; }
+    .task-item-cancel {
+      padding: 2px 6px; font-size: 10px; border-radius: 4px;
+      background: transparent; border: 1px solid #7f1d1d; color: #f87171;
+      cursor: pointer; transition: background 0.15s;
+    }
+    .task-item-cancel:hover { background: rgba(239,68,68,0.2); }
   </style>
 </head>
 <body>
@@ -260,8 +289,13 @@
 
   <!-- Frame task status -->
   <div class="task-status-bar" id="taskStatusBar">
-    <span class="spinner"></span>
-    <span id="taskStatusText"></span>
+    <div class="task-status-header" onclick="toggleTaskList()">
+      <span class="spinner"></span>
+      <span class="summary" id="taskStatusText"></span>
+      <button class="task-cancel-all" onclick="event.stopPropagation();cancelAllTasks()">全部取消</button>
+      <span class="toggle-icon">&#9660;</span>
+    </div>
+    <div class="task-list" id="taskList"></div>
   </div>
 
   <!-- Subdirectories -->
@@ -657,29 +691,55 @@ async function confirmDeleteFiles() {
 // Frame task status polling
 let _taskPollTimer = null;
 
+function toggleTaskList() {
+  document.getElementById('taskStatusBar').classList.toggle('expanded');
+}
+
+async function cancelTask(itemId) {
+  try {
+    await fetch('/api/v1/frame-tasks/' + itemId, { method: 'DELETE' });
+    pollFrameTasks();
+  } catch (e) { /* ignore */ }
+}
+
+async function cancelAllTasks() {
+  try {
+    await fetch('/api/v1/frame-tasks', { method: 'DELETE' });
+    pollFrameTasks();
+  } catch (e) { /* ignore */ }
+}
+
 async function pollFrameTasks() {
   try {
     const res = await fetch('/api/v1/frame-tasks');
     const data = await res.json();
     const bar = document.getElementById('taskStatusBar');
     const text = document.getElementById('taskStatusText');
+    const list = document.getElementById('taskList');
     if (data.count > 0) {
       const generating = data.tasks.filter(t => t.status === 'generating');
       const queued = data.tasks.filter(t => t.status === 'queued');
-      let msg = '';
+      let msg = data.count + ' 个截图任务';
       if (generating.length > 0) {
-        const t = generating[0];
-        msg = '正在生成截图 (' + t.progress_current + '/' + t.progress_total + ')';
-        if (generating.length + queued.length > 1) {
-          msg += '，队列中还有 ' + (generating.length + queued.length - 1) + ' 个任务';
-        }
-      } else {
-        msg = queued.length + ' 个截图任务排队中';
+        msg += '（' + generating.length + ' 生成中，' + queued.length + ' 排队）';
       }
       text.textContent = msg;
+
+      list.innerHTML = data.tasks.map(t => {
+        const prog = t.status === 'generating'
+          ? t.progress_current + '/' + t.progress_total
+          : '排队中';
+        return '<div class="task-item">' +
+          '<span class="task-item-name">' + t.file_name + '</span>' +
+          '<span class="task-item-progress">' + prog + '</span>' +
+          '<button class="task-item-cancel" onclick="cancelTask(\'' + t.item_id + '\')">取消</button>' +
+          '</div>';
+      }).join('');
+
       bar.classList.add('active');
     } else {
       bar.classList.remove('active');
+      bar.classList.remove('expanded');
       clearInterval(_taskPollTimer);
       _taskPollTimer = null;
     }

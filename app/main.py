@@ -248,17 +248,35 @@ def stream_video(item_id: str):
 
 @app.get("/api/v1/frame-tasks")
 def list_frame_tasks() -> dict:
+    database = get_database()
     with frame_worker._lock:
         active = []
         for item_id, task in frame_worker._tasks.items():
             if task.status in ("queued", "generating"):
+                item = database.get_item(item_id)
+                file_name = item["file_name"] if item else item_id
                 active.append({
                     "item_id": item_id,
+                    "file_name": file_name,
                     "status": task.status,
                     "progress_current": task.progress_current,
                     "progress_total": task.progress_total,
                 })
     return {"tasks": active, "count": len(active)}
+
+
+@app.delete("/api/v1/frame-tasks/{item_id}")
+def cancel_frame_task(item_id: str) -> dict:
+    ok = frame_worker.cancel(item_id)
+    if not ok:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="no active task for this item")
+    return {"cancelled": item_id}
+
+
+@app.delete("/api/v1/frame-tasks")
+def cancel_all_frame_tasks() -> dict:
+    count = frame_worker.cancel_all()
+    return {"cancelled": count}
 
 
 @app.get("/api/v1/browse")
