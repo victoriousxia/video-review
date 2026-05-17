@@ -122,14 +122,6 @@ class TestTryInterceptWithActiveApproval:
         download_dir.mkdir(parents=True, exist_ok=True)
         (download_dir / "episode01.mkv").write_bytes(b"x" * 1024)
 
-        # Register notifications (simulates what the notify script does in production:
-        # sends to "telegram"/"weixin" targets and records chat_id=platform_name).
-        from scripts.hermes_operation_state import ApprovalStore
-        store = ApprovalStore(ops_dir / ".hermes-approvals.json")
-        store.upsert_operation(operation_id)
-        store.record_notification(operation_id, platform="telegram", chat_id="telegram")
-        store.record_notification(operation_id, platform="weixin", chat_id="weixin")
-
         return operation_id
 
     def test_choice_1_moves_to_trash(self, tmp_path):
@@ -249,13 +241,6 @@ class TestTryInterceptMultipleApprovals:
             (pending / f"{operation_id}.json").write_text(
                 json.dumps(op_data, ensure_ascii=False), encoding="utf-8"
             )
-
-        # Register notifications for both operations
-        from scripts.hermes_operation_state import ApprovalStore
-        store = ApprovalStore(ops_dir / ".hermes-approvals.json")
-        for op_id in ids:
-            store.upsert_operation(op_id)
-            store.record_notification(op_id, platform="telegram", chat_id="telegram")
 
         return tuple(ids)
 

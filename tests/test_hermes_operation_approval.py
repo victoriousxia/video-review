@@ -98,12 +98,6 @@ def test_resolve_reply_matches_single_active_operation_and_marks_state(tmp_path)
     operations = tmp_path / "operations"
     write_pending(operations, make_operation(root, op_id="op_reply", rel="Show/E01.mkv"))
 
-    # Pre-register notification (simulates notify script sending to weixin home)
-    from scripts.hermes_operation_state import ApprovalStore
-    store = ApprovalStore(operations / ".hermes-approvals.json")
-    store.upsert_operation("op_reply")
-    store.record_notification("op_reply", platform="weixin", chat_id="weixin")
-
     result = resolve_reply(
         operations,
         platform="weixin",
@@ -128,13 +122,6 @@ def test_resolve_reply_reports_ambiguity_for_multiple_active_operations(tmp_path
     operations = tmp_path / "operations"
     write_pending(operations, make_operation(root, op_id="op_a", rel="Show/E01.mkv"))
     write_pending(operations, make_operation(root, op_id="op_b", rel="Show/E02.mkv"))
-
-    # Pre-register notifications
-    from scripts.hermes_operation_state import ApprovalStore
-    store = ApprovalStore(operations / ".hermes-approvals.json")
-    for op_id in ("op_a", "op_b"):
-        store.upsert_operation(op_id)
-        store.record_notification(op_id, platform="telegram", chat_id="telegram")
 
     result = resolve_reply(
         operations,
@@ -162,12 +149,7 @@ def test_resolve_reply_token_selects_operation_when_multiple_active(tmp_path):
     write_pending(operations, make_operation(root, op_id="op_a", rel="Show/E01.mkv"))
     write_pending(operations, make_operation(root, op_id="op_b", rel="Show/E02.mkv"))
 
-    # Pre-register notifications
-    from scripts.hermes_operation_state import ApprovalStore, operation_token
-    store = ApprovalStore(operations / ".hermes-approvals.json")
-    for op_id in ("op_a", "op_b"):
-        store.upsert_operation(op_id)
-        store.record_notification(op_id, platform="telegram", chat_id="telegram")
+    from scripts.hermes_operation_state import operation_token
 
     token_b = operation_token("op_b")
 
