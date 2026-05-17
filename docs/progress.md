@@ -71,7 +71,27 @@ NAS 工作目录：`/nas/docker/video-review`
 
 ## 进行中
 
+- P0 Hermes 审批执行文件操作：协议文档已建立，下一步实现 `video-review` 只生成 operation request，Hermes 审批后执行。
 - v0.3.4 设置模块：帧生成参数配置 + 资源管理
+
+### P0 Hermes 审批执行文件操作
+
+核心协议：`docs/file-operation-protocol.md`。
+
+目标：
+
+- Web UI 的删除/整理操作不直接修改真实媒体文件。
+- video-review 只写 `/app/data/operations/pending/<operation_id>.json`。
+- Hermes 从 `/nas/docker/video-review/data/operations/pending/` 读取请求。
+- Hermes 通过 Telegram/微信请求确认。
+- 用户确认后，Hermes 执行移动到回收站、后续整理/改名等操作。
+- 第一阶段删除语义为 `move_to_trash`，不是永久删除。
+
+约束：
+
+- 保持媒体挂载只读。
+- 不允许 web app 对媒体文件调用 `unlink()`、`rm`、`shutil.move()`。
+- operation JSON v1 字段是 `video-review` 与 Hermes 的稳定内部协议。
 
 ### v0.3.4 设置模块
 

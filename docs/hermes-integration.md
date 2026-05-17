@@ -2,6 +2,27 @@
 
 video-review is not strongly coupled to Hermes.
 
+## P0：Hermes 审批执行文件操作
+
+video-review 不直接删除、移动或重命名真实媒体文件。Web UI 中的删除/整理操作只生成操作请求文件，真正执行由 Hermes 在用户确认后完成。
+
+核心协议见：`docs/file-operation-protocol.md`。
+
+P0 流程：
+
+1. 用户在 Web UI 标记条目为待删除。
+2. 用户点击提交删除请求。
+3. video-review 写入 `/app/data/operations/pending/<operation_id>.json`。
+4. Hermes 从 `/nas/docker/video-review/data/operations/pending/` 读取请求。
+5. Hermes 通过 Telegram/微信请求用户确认。
+6. 用户确认后，Hermes 执行移动到回收站等真实文件操作。
+
+约束：
+
+- video-review 正常容器的媒体目录继续只读挂载。
+- video-review 不调用 `unlink()`、`rm`、`shutil.move()` 处理真实媒体文件。
+- 第一阶段“删除”表示 `move_to_trash`，不是永久删除。
+
 ## Recommended model
 
 The Docker service exposes standard HTTP endpoints and later a CLI. Hermes acts as an orchestrator:
