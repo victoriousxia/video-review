@@ -10,8 +10,8 @@ services:
       - "8818:8818"
     volumes:
       - ./data:/app/data
-      - /nas/download:/media/download:ro
-      - /nas/media:/media/library:ro
+      - /nas/download:/media/download:rw
+      - /nas/media:/media/library:rw
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8818/healthz', timeout=3).read()"]
       interval: 30s
