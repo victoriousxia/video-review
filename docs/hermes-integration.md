@@ -17,6 +17,12 @@ P0 流程：
 5. Hermes 通过 Telegram/微信请求用户确认。
 6. 用户确认后，Hermes 执行移动到回收站等真实文件操作。
 
+Hermes 侧执行器：
+
+- 交互式菜单：`scripts/hermes-approve-operation.sh`
+- 直接 CLI：`scripts/hermes_operation_executor.py`
+- 使用说明：`docs/hermes-operation-executor.md`
+
 约束：
 
 - video-review 正常容器的媒体目录继续只读挂载。
