@@ -251,18 +251,22 @@ def stream_video(item_id: str):
 def list_frame_tasks() -> dict:
     database = get_database()
     with frame_worker._lock:
-        active = []
-        for item_id, task in frame_worker._tasks.items():
-            if task.status in ("queued", "generating"):
-                item = database.get_item(item_id)
-                file_name = item["file_name"] if item else item_id
-                active.append({
-                    "item_id": item_id,
-                    "file_name": file_name,
-                    "status": task.status,
-                    "progress_current": task.progress_current,
-                    "progress_total": task.progress_total,
-                })
+        active_ids = [
+            (item_id, task.status, task.progress_current, task.progress_total)
+            for item_id, task in frame_worker._tasks.items()
+            if task.status in ("queued", "generating")
+        ]
+    active = []
+    for item_id, task_status, progress_current, progress_total in active_ids:
+        item = database.get_item(item_id)
+        file_name = item["file_name"] if item else item_id
+        active.append({
+            "item_id": item_id,
+            "file_name": file_name,
+            "status": task_status,
+            "progress_current": progress_current,
+            "progress_total": progress_total,
+        })
     return {"tasks": active, "count": len(active)}
 
 

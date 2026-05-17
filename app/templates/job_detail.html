@@ -398,6 +398,8 @@ function closeOtherPreviews(exceptCard) {
     panel.querySelector('.preview-video').classList.remove('active');
     panel.querySelector('.preview-frames').classList.remove('active');
     video.pause();
+    video.removeAttribute('src');
+    video.load();
     playBtn.classList.remove('active');
     playBtn.innerHTML = '&#9654;';
     panel.querySelector('.video-play-btn').innerHTML = ICON_PLAY;
@@ -419,6 +421,8 @@ async function togglePreview(btn) {
     videoSection.classList.remove('active');
     framesSection.classList.remove('active');
     video.pause();
+    video.removeAttribute('src');
+    video.load();
     playBtn.classList.remove('active');
     playBtn.innerHTML = '&#9654;';
     const inlinePlayBtn = panel.querySelector('.video-play-btn');
@@ -445,6 +449,7 @@ async function togglePreview(btn) {
     grid.innerHTML = '<div class="frames-loading"><span class="spinner"></span>已提交生成任务...</div>';
     await fetch('/api/v1/items/' + itemId + '/frames', { method: 'POST' });
     startPolling(itemId, grid, btn);
+    startTaskPolling();
     return;
   }
 
@@ -479,21 +484,24 @@ function toggleVideo(btn) {
   framesSection.classList.remove('active');
   videoSection.classList.add('active');
 
-  if (!video.src) {
+  if (!video.hasAttribute('src')) {
     video.src = '/api/v1/items/' + itemId + '/video';
-    video.addEventListener('timeupdate', function() {
-      const fill = panel.querySelector('.video-progress-fill');
-      const timeEl = panel.querySelector('.video-time');
-      if (video.duration) {
-        fill.style.width = (video.currentTime / video.duration * 100) + '%';
-        timeEl.textContent = fmtTime(video.currentTime) + ' / ' + fmtTime(video.duration);
-      }
-    });
-    video.addEventListener('ended', function() {
-      btn.innerHTML = '&#9654;';
-      btn.classList.remove('active');
-      inlinePlayBtn.innerHTML = ICON_PLAY;
-    });
+    if (!video.dataset.bound) {
+      video.dataset.bound = '1';
+      video.addEventListener('timeupdate', function() {
+        const fill = panel.querySelector('.video-progress-fill');
+        const timeEl = panel.querySelector('.video-time');
+        if (video.duration) {
+          fill.style.width = (video.currentTime / video.duration * 100) + '%';
+          timeEl.textContent = fmtTime(video.currentTime) + ' / ' + fmtTime(video.duration);
+        }
+      });
+      video.addEventListener('ended', function() {
+        btn.innerHTML = '&#9654;';
+        btn.classList.remove('active');
+        inlinePlayBtn.innerHTML = ICON_PLAY;
+      });
+    }
   }
   video.play();
   btn.innerHTML = '&#10074;&#10074;';
@@ -510,6 +518,7 @@ async function regenerateFrames(regenBtn) {
   grid.innerHTML = '<div class="frames-loading"><span class="spinner"></span>已提交重新生成...</div>';
   await fetch('/api/v1/items/' + itemId + '/frames?force=true', { method: 'POST' });
   startPolling(itemId, grid, card.querySelector('.file-card-main'));
+  startTaskPolling();
 }
 
 function startPolling(itemId, grid, previewBtn) {
@@ -755,8 +764,9 @@ async function pollFrameTasks() {
         const prog = t.status === 'generating'
           ? t.progress_current + '/' + t.progress_total
           : '排队中';
+        const name = t.file_name.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
         return '<div class="task-item">' +
-          '<span class="task-item-name">' + t.file_name + '</span>' +
+          '<span class="task-item-name">' + name + '</span>' +
           '<span class="task-item-progress">' + prog + '</span>' +
           '<button class="task-item-cancel" onclick="cancelTask(\'' + t.item_id + '\')">取消</button>' +
           '</div>';

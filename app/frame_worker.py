@@ -136,6 +136,7 @@ class FrameWorker:
                     task.status = "done"
                     task.progress_current = len(filenames)
                     task.progress_total = len(filenames)
+                    self._cleanup_old_tasks()
         except _CancelledError:
             with self._lock:
                 self._cancelled.discard(item_id)
@@ -164,3 +165,9 @@ class FrameWorker:
             "error": task.error,
             "frames": frames,
         }
+
+    def _cleanup_old_tasks(self) -> None:
+        terminal = [k for k, t in self._tasks.items() if t.status in ("done", "failed", "cancelled")]
+        if len(terminal) > 50:
+            for k in terminal[:len(terminal) - 20]:
+                del self._tasks[k]
