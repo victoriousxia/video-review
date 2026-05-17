@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="NAS video review favicon">
+  <defs>
+    <linearGradient id="bg" x1="80" y1="48" x2="432" y2="464" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#102A43"/>
+      <stop offset="0.58" stop-color="#0B3B4A"/>
+      <stop offset="1" stop-color="#111827"/>
+    </linearGradient>
+    <linearGradient id="panel" x1="122" y1="112" x2="392" y2="392" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#164E63"/>
+      <stop offset="1" stop-color="#0F172A"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#020617" flood-opacity="0.34"/>
+    </filter>
+  </defs>
+
+  <rect width="512" height="512" rx="108" fill="url(#bg)"/>
+
+  <g filter="url(#shadow)">
+    <rect x="96" y="108" width="320" height="292" rx="46" fill="url(#panel)"/>
+    <rect x="126" y="140" width="28" height="28" rx="7" fill="#22D3EE" opacity="0.9"/>
+    <rect x="126" y="190" width="28" height="28" rx="7" fill="#22D3EE" opacity="0.72"/>
+    <rect x="126" y="240" width="28" height="28" rx="7" fill="#22D3EE" opacity="0.54"/>
+    <rect x="358" y="250" width="28" height="28" rx="7" fill="#22D3EE" opacity="0.54"/>
+    <rect x="358" y="300" width="28" height="28" rx="7" fill="#22D3EE" opacity="0.72"/>
+    <rect x="358" y="350" width="28" height="28" rx="7" fill="#22D3EE" opacity="0.9"/>
+
+    <path d="M224 178C224 165.8 237.2 158.2 247.8 164.3L319.8 205.9C330.4 212 330.4 227.2 319.8 233.3L247.8 274.9C237.2 281 224 273.4 224 261.2V178Z" fill="#F8FAFC"/>
+
+    <rect x="142" y="308" width="228" height="36" rx="18" fill="#38BDF8" opacity="0.92"/>
+    <rect x="142" y="356" width="228" height="36" rx="18" fill="#FACC15" opacity="0.95"/>
+    <circle cx="336" cy="326" r="8" fill="#0F172A"/>
+    <circle cx="336" cy="374" r="8" fill="#0F172A"/>
+  </g>
+
+  <circle cx="382" cy="130" r="58" fill="#F43F5E"/>
+</svg>
