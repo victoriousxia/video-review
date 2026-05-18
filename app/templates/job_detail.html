@@ -536,7 +536,12 @@ function startPolling(itemId, grid, previewBtn) {
       renderFrames(grid, data.frames, previewBtn);
     } else if (data.status === 'failed') {
       stopPolling(itemId);
-      grid.innerHTML = '<div class="frames-loading" style="color:#f87171">生成失败: ' + (data.error || '未知错误') + '</div>';
+      const errDiv = document.createElement('div');
+      errDiv.className = 'frames-loading';
+      errDiv.style.color = '#f87171';
+      errDiv.textContent = '生成失败: ' + (data.error || '未知错误');
+      grid.innerHTML = '';
+      grid.appendChild(errDiv);
     } else {
       updateLoadingText(grid, data);
     }

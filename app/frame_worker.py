@@ -174,5 +174,5 @@ class FrameWorker:
         if len(terminal) > self._MAX_TERMINAL_TASKS:
             for k in terminal[:len(terminal) - self._MAX_TERMINAL_TASKS]:
                 del self._tasks[k]
-        active_ids = {k for k, t in self._tasks.items() if t.status in ("queued", "generating")}
+        active_ids = set(self._tasks.keys())
         self._cancelled = self._cancelled & active_ids
