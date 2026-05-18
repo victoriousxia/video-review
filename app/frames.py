@@ -79,7 +79,7 @@ def generate_frames_with_progress(
         if vf_filters:
             cmd += ["-vf", ",".join(vf_filters)]
         cmd.append(str(out_path))
-        subprocess.run(cmd, capture_output=True, timeout=timeout)
+        subprocess.run(cmd, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=timeout)
         if out_path.exists():
             filenames.append(filename)
         if on_progress:

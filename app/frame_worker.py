@@ -22,6 +22,8 @@ class FrameTaskStatus:
 
 
 class FrameWorker:
+    _MAX_TERMINAL_TASKS = 20
+
     def __init__(
         self,
         frames_dir: Path,
@@ -146,7 +148,8 @@ class FrameWorker:
                 task = self._tasks.get(item_id)
                 if task:
                     task.status = "failed"
-                    task.error = str(exc)
+                    task.error = str(exc)[:200]
+                    self._cleanup_old_tasks()
 
     def _status_dict(self, item_id: str, task: FrameTaskStatus) -> dict:
         frames: list[str] = []
@@ -168,6 +171,8 @@ class FrameWorker:
 
     def _cleanup_old_tasks(self) -> None:
         terminal = [k for k, t in self._tasks.items() if t.status in ("done", "failed", "cancelled")]
-        if len(terminal) > 50:
-            for k in terminal[:len(terminal) - 20]:
+        if len(terminal) > self._MAX_TERMINAL_TASKS:
+            for k in terminal[:len(terminal) - self._MAX_TERMINAL_TASKS]:
                 del self._tasks[k]
+        active_ids = {k for k, t in self._tasks.items() if t.status in ("queued", "generating")}
+        self._cancelled = self._cancelled & active_ids

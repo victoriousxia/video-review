@@ -573,4 +573,60 @@ def clear_all_frames() -> dict:
                 shutil.rmtree(d)
                 removed += 1
     frame_worker._tasks.clear()
+    frame_worker._cancelled.clear()
     return {"removed_items": removed}
+
+
+@app.get("/api/v1/debug/memory")
+def debug_memory() -> dict:
+    import os
+    import resource
+
+    rusage = resource.getrusage(resource.RUSAGE_SELF)
+    rss_bytes = rusage.ru_maxrss
+    if os.uname().sysname == "Darwin":
+        rss_mb = rss_bytes / 1048576
+    else:
+        rss_mb = rss_bytes / 1024
+
+    cgroup_mem: dict = {}
+    try:
+        with open("/sys/fs/cgroup/memory.current") as f:
+            cgroup_mem["current_mb"] = int(f.read().strip()) / 1048576
+        with open("/sys/fs/cgroup/memory.stat") as f:
+            for line in f:
+                parts = line.split()
+                if len(parts) == 2 and parts[0] in ("file", "anon", "inactive_file", "active_file"):
+                    cgroup_mem[parts[0] + "_mb"] = int(parts[1]) / 1048576
+    except FileNotFoundError:
+        try:
+            with open("/sys/fs/cgroup/memory/memory.usage_in_bytes") as f:
+                cgroup_mem["current_mb"] = int(f.read().strip()) / 1048576
+            with open("/sys/fs/cgroup/memory/memory.stat") as f:
+                for line in f:
+                    parts = line.split()
+                    if len(parts) == 2 and parts[0] in ("total_cache", "total_rss", "total_inactive_file", "total_active_file"):
+                        cgroup_mem[parts[0] + "_mb"] = int(parts[1]) / 1048576
+        except FileNotFoundError:
+            cgroup_mem["error"] = "not running in cgroup"
+
+    with frame_worker._lock:
+        task_counts = {}
+        for t in frame_worker._tasks.values():
+            task_counts[t.status] = task_counts.get(t.status, 0) + 1
+        cancelled_count = len(frame_worker._cancelled)
+
+    import subprocess as sp
+    ffmpeg_procs = sp.run(["pgrep", "-c", "ffmpeg"], capture_output=True, text=True)
+    ffmpeg_count = int(ffmpeg_procs.stdout.strip()) if ffmpeg_procs.returncode == 0 else 0
+
+    return {
+        "python_rss_mb": round(rss_mb, 1),
+        "cgroup": {k: round(v, 1) if isinstance(v, float) else v for k, v in cgroup_mem.items()},
+        "frame_worker": {
+            "task_counts": task_counts,
+            "cancelled_set_size": cancelled_count,
+            "total_tracked": len(frame_worker._tasks),
+        },
+        "ffmpeg_processes": ffmpeg_count,
+    }
