@@ -575,8 +575,9 @@ def clear_all_frames() -> dict:
             if d.is_dir():
                 shutil.rmtree(d)
                 removed += 1
-    frame_worker._tasks.clear()
-    frame_worker._cancelled.clear()
+    with frame_worker._lock:
+        frame_worker._tasks.clear()
+        frame_worker._cancelled.clear()
     return {"removed_items": removed}
 
 
@@ -618,6 +619,7 @@ def debug_memory() -> dict:
         for t in frame_worker._tasks.values():
             task_counts[t.status] = task_counts.get(t.status, 0) + 1
         cancelled_count = len(frame_worker._cancelled)
+        total_tracked = len(frame_worker._tasks)
 
     try:
         result = sp.run(["pgrep", "ffmpeg"], stdout=sp.PIPE, stderr=sp.DEVNULL, text=True)
@@ -630,7 +632,7 @@ def debug_memory() -> dict:
         "frame_worker": {
             "task_counts": task_counts,
             "cancelled_set_size": cancelled_count,
-            "total_tracked": len(frame_worker._tasks),
+            "total_tracked": total_tracked,
         },
         "ffmpeg_processes": ffmpeg_count,
     }
