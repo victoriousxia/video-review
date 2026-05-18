@@ -577,7 +577,6 @@ def clear_all_frames() -> dict:
                 removed += 1
     with frame_worker._lock:
         frame_worker._tasks.clear()
-        frame_worker._cancelled.clear()
     return {"removed_items": removed}
 
 
@@ -618,7 +617,6 @@ def debug_memory() -> dict:
         task_counts = {}
         for t in frame_worker._tasks.values():
             task_counts[t.status] = task_counts.get(t.status, 0) + 1
-        cancelled_count = len(frame_worker._cancelled)
         total_tracked = len(frame_worker._tasks)
 
     try:
@@ -631,7 +629,6 @@ def debug_memory() -> dict:
         "cgroup": {k: round(v, 1) if isinstance(v, float) else v for k, v in cgroup_mem.items()},
         "frame_worker": {
             "task_counts": task_counts,
-            "cancelled_set_size": cancelled_count,
             "total_tracked": total_tracked,
         },
         "ffmpeg_processes": ffmpeg_count,

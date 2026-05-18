@@ -19,6 +19,7 @@ class FrameTaskStatus:
     progress_current: int = 0
     progress_total: int = 0
     error: str | None = None
+    epoch: int = 0
 
 
 class FrameWorker:
@@ -44,19 +45,19 @@ class FrameWorker:
         self._executor = ThreadPoolExecutor(max_workers=max_workers)
         self._lock = threading.Lock()
         self._tasks: dict[str, FrameTaskStatus] = {}
-        self._cancelled: set[str] = set()
+        self._next_epoch: int = 0
 
     def submit(self, item_id: str, video_path: str, force: bool = False) -> dict:
         with self._lock:
             task = self._tasks.get(item_id)
             if task and task.status in ("queued", "generating") and not force:
                 return self._status_dict(item_id, task)
-            if force and task and task.status in ("queued", "generating"):
-                self._cancelled.add(item_id)
-            task = FrameTaskStatus(status="queued", progress_total=self._default_count)
+            self._next_epoch += 1
+            epoch = self._next_epoch
+            task = FrameTaskStatus(status="queued", progress_total=self._default_count, epoch=epoch)
             self._tasks[item_id] = task
 
-        self._executor.submit(self._generate, item_id, video_path, force)
+        self._executor.submit(self._generate, item_id, video_path, force, epoch)
         return self._status_dict(item_id, task)
 
     def get_status(self, item_id: str) -> dict:
@@ -83,7 +84,6 @@ class FrameWorker:
             task = self._tasks.get(item_id)
             if not task or task.status not in ("queued", "generating"):
                 return False
-            self._cancelled.add(item_id)
             task.status = "cancelled"
             return True
 
@@ -92,19 +92,17 @@ class FrameWorker:
             count = 0
             for item_id, task in self._tasks.items():
                 if task.status in ("queued", "generating"):
-                    self._cancelled.add(item_id)
                     task.status = "cancelled"
                     count += 1
             return count
 
-    def _generate(self, item_id: str, video_path: str, force: bool) -> None:
+    def _generate(self, item_id: str, video_path: str, force: bool, epoch: int) -> None:
         with self._lock:
-            if item_id in self._cancelled:
-                self._cancelled.discard(item_id)
-                self._tasks.pop(item_id, None)
-                return
             task = self._tasks.get(item_id)
-            if not task:
+            if not task or task.epoch != epoch:
+                return
+            if task.status == "cancelled":
+                self._tasks.pop(item_id, None)
                 return
             task.status = "generating"
             task.progress_current = 0
@@ -113,12 +111,11 @@ class FrameWorker:
 
         def on_progress(current: int, total: int) -> None:
             with self._lock:
-                if item_id in self._cancelled:
-                    raise _CancelledError()
                 t = self._tasks.get(item_id)
-                if t:
-                    t.progress_current = current
-                    t.progress_total = total
+                if not t or t.epoch != epoch or t.status == "cancelled":
+                    raise _CancelledError()
+                t.progress_current = current
+                t.progress_total = total
 
         try:
             filenames = generate_frames_with_progress(
@@ -134,22 +131,23 @@ class FrameWorker:
             )
             with self._lock:
                 task = self._tasks.get(item_id)
-                if task:
+                if task and task.epoch == epoch:
                     task.status = "done"
                     task.progress_current = len(filenames)
                     task.progress_total = len(filenames)
-                    self._cleanup_old_tasks()
+                self._cleanup_old_tasks()
         except _CancelledError:
             with self._lock:
-                self._cancelled.discard(item_id)
-                self._tasks.pop(item_id, None)
+                task = self._tasks.get(item_id)
+                if task and task.epoch == epoch:
+                    self._tasks.pop(item_id, None)
         except Exception as exc:
             with self._lock:
                 task = self._tasks.get(item_id)
-                if task:
+                if task and task.epoch == epoch:
                     task.status = "failed"
                     task.error = str(exc)[:200]
-                    self._cleanup_old_tasks()
+                self._cleanup_old_tasks()
 
     def _status_dict(self, item_id: str, task: FrameTaskStatus) -> dict:
         frames: list[str] = []
@@ -174,5 +172,3 @@ class FrameWorker:
         if len(terminal) > self._MAX_TERMINAL_TASKS:
             for k in terminal[:len(terminal) - self._MAX_TERMINAL_TASKS]:
                 del self._tasks[k]
-        active_ids = set(self._tasks.keys())
-        self._cancelled = self._cancelled & active_ids
