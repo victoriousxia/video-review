@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     library_root: Path = Field(default=Path("/media/library"), alias="VIDEO_REVIEW_LIBRARY_ROOT")
     auth_mode: str = Field(default="proxy", alias="VIDEO_REVIEW_AUTH_MODE")
     app_token: str = Field(default="", alias="VIDEO_REVIEW_APP_TOKEN")
+    debug: bool = Field(default=False, alias="VIDEO_REVIEW_DEBUG")
     frames_count: int = Field(default=9, alias="VIDEO_REVIEW_FRAMES_COUNT")
     frames_quality: int = Field(default=2, alias="VIDEO_REVIEW_FRAMES_QUALITY")
     frames_workers: int = Field(default=2, alias="VIDEO_REVIEW_FRAMES_WORKERS")

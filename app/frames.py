@@ -66,6 +66,7 @@ def generate_frames_with_progress(
         vf_filters.append(f"scale='min({max_width},iw)':-2")
 
     filenames: list[str] = []
+    last_error: str = ""
     for idx, ts in enumerate(timestamps):
         filename = f"frame_{idx:03d}.jpg"
         out_path = output_dir / filename
@@ -79,14 +80,16 @@ def generate_frames_with_progress(
         if vf_filters:
             cmd += ["-vf", ",".join(vf_filters)]
         cmd.append(str(out_path))
-        subprocess.run(cmd, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=timeout)
+        result = subprocess.run(cmd, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True, timeout=timeout)
         if out_path.exists():
             filenames.append(filename)
+        elif result.stderr:
+            last_error = result.stderr.strip()[:200]
         if on_progress:
             on_progress(idx + 1, count)
 
     if not filenames:
-        raise RuntimeError("ffmpeg produced no frames")
+        raise RuntimeError(f"ffmpeg produced no frames: {last_error}" if last_error else "ffmpeg produced no frames")
     return filenames
 
 

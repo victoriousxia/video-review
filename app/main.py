@@ -1,6 +1,9 @@
 from contextlib import asynccontextmanager
 from dataclasses import asdict
+import os
 from pathlib import Path
+import resource
+import subprocess as sp
 
 from fastapi import FastAPI, Form, HTTPException, Request, status
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
@@ -579,8 +582,8 @@ def clear_all_frames() -> dict:
 
 @app.get("/api/v1/debug/memory")
 def debug_memory() -> dict:
-    import os
-    import resource
+    if not settings.debug:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not found")
 
     rusage = resource.getrusage(resource.RUSAGE_SELF)
     rss_bytes = rusage.ru_maxrss
@@ -616,10 +619,11 @@ def debug_memory() -> dict:
             task_counts[t.status] = task_counts.get(t.status, 0) + 1
         cancelled_count = len(frame_worker._cancelled)
 
-    import subprocess as sp
-    ffmpeg_procs = sp.run(["pgrep", "-c", "ffmpeg"], capture_output=True, text=True)
-    ffmpeg_count = int(ffmpeg_procs.stdout.strip()) if ffmpeg_procs.returncode == 0 else 0
-
+    try:
+        result = sp.run(["pgrep", "ffmpeg"], stdout=sp.PIPE, stderr=sp.DEVNULL, text=True)
+        ffmpeg_count = len(result.stdout.strip().splitlines()) if result.returncode == 0 else 0
+    except FileNotFoundError:
+        ffmpeg_count = 0
     return {
         "python_rss_mb": round(rss_mb, 1),
         "cgroup": {k: round(v, 1) if isinstance(v, float) else v for k, v in cgroup_mem.items()},
